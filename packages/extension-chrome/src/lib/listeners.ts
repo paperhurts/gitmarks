@@ -221,11 +221,16 @@ function applyBatch(
     } else if (event.kind === "update") {
       const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
       if (ulid == null) continue;
+      const existing = file.bookmarks.find((b) => b.id === ulid);
+      if (existing == null) continue;
       const patch: Partial<Omit<Bookmark, "id">> = {};
-      if (event.url != null) patch.url = normalizeUrl(event.url);
-      if (event.title != null) patch.title = event.title;
-      // Belt-and-braces: unreachable in practice because the Pending type now
-      // requires at least one of url/title, but kept for defensive correctness.
+      if ("url" in event && event.url !== undefined) {
+        const normalized = normalizeUrl(event.url);
+        if (normalized !== existing.url) patch.url = normalized;
+      }
+      if ("title" in event && event.title !== undefined) {
+        if (event.title !== existing.title) patch.title = event.title;
+      }
       if (Object.keys(patch).length === 0) continue;
       file = updateBookmark(file, ulid, patch, nowIso);
     } else if (event.kind === "remove") {
