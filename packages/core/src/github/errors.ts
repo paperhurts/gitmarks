@@ -18,8 +18,8 @@ export class GitHubAuthError extends GitHubError {
 export class GitHubConflictError extends GitHubError {
   readonly path: string;
 
-  constructor(path: string) {
-    super(`conflict writing ${path}`, 409);
+  constructor(path: string, status = 409) {
+    super(`conflict writing ${path}`, status);
     this.name = "GitHubConflictError";
     this.path = path;
   }
