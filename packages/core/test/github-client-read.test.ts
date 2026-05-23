@@ -81,6 +81,20 @@ describe("GitHubClient.read", () => {
       GitHubError,
     );
   });
+
+  it("defaults etag to empty string when the response omits it", async () => {
+    const data = { hi: 1 };
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockResponse(200, {
+        content: encodeBase64Utf8(JSON.stringify(data)),
+        sha: "s3",
+        encoding: "base64",
+      }),
+    );
+    const client = mkClient(fetchMock);
+    const result = await client.read<typeof data>("bookmarks.json");
+    expect(result.etag).toBe("");
+  });
 });
 
 describe("GitHubClient.readIfChanged", () => {

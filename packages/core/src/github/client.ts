@@ -39,22 +39,31 @@ export class GitHubClient {
     this.repo = opts.repo;
     this.token = opts.token;
     this.branch = opts.branch ?? "main";
-    this.fetchImpl = opts.fetch ?? globalThis.fetch.bind(globalThis);
+    this.fetchImpl =
+      opts.fetch ??
+      ((input, init) => {
+        if (typeof globalThis.fetch !== "function") {
+          throw new Error(
+            "fetch is not available in this environment; pass opts.fetch",
+          );
+        }
+        return globalThis.fetch(input, init);
+      });
     this.baseUrl = opts.baseUrl ?? "https://api.github.com";
   }
 
   private headers(extra: Record<string, string> = {}): Record<string, string> {
     return {
       Accept: "application/vnd.github+json",
+      ...extra,
       Authorization: `Bearer ${this.token}`,
       "X-GitHub-Api-Version": "2022-11-28",
-      ...extra,
     };
   }
 
   private contentsUrl(path: string): string {
     const enc = path.split("/").map(encodeURIComponent).join("/");
-    return `${this.baseUrl}/repos/${this.owner}/${this.repo}/contents/${enc}?ref=${this.branch}`;
+    return `${this.baseUrl}/repos/${this.owner}/${this.repo}/contents/${enc}?ref=${encodeURIComponent(this.branch)}`;
   }
 
   private throwForStatus(res: Response, path: string): void {
@@ -89,6 +98,12 @@ export class GitHubClient {
 
   private async parseRead<T>(res: Response): Promise<ReadResult<T>> {
     const body = (await res.json()) as ContentsReadBody;
+    if (typeof body.content !== "string" || body.encoding !== "base64") {
+      throw new GitHubError(
+        `unexpected GitHub contents payload (encoding=${body.encoding})`,
+        res.status,
+      );
+    }
     const decoded = decodeBase64Utf8(body.content);
     const data = JSON.parse(decoded) as T;
     return {
