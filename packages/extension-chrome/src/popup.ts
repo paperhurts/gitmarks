@@ -1,12 +1,26 @@
+import { GitHubClient } from "@gitmarks/core";
 import { loadSettings } from "./lib/settings.js";
-import type { SaveResult } from "./lib/save-flow.js";
+import { getMachineId } from "./lib/machine-id.js";
+import { saveBookmark, type SaveResult } from "./lib/save-flow.js";
 
 const root = document.getElementById("root");
 if (root == null) throw new Error("#root not found");
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
+  // When opened as a real extension popup, currentWindow refers to the browser
+  // window the user was in (not the popup's own floating window), so this gives
+  // the tab the user was viewing.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab ?? null;
+  if (tab != null && tab.url != null && !tab.url.startsWith("chrome-extension://")) {
+    return tab;
+  }
+  // Fallback for cases where the popup is opened as a tab (e.g., in tests):
+  // return the most recently accessed regular tab.
+  const allTabs = await chrome.tabs.query({});
+  const regularTabs = allTabs
+    .filter(t => t.url != null && !t.url.startsWith("chrome-extension://") && !t.url.startsWith("about:"))
+    .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0));
+  return regularTabs[0] ?? null;
 }
 
 async function render(): Promise<void> {
@@ -43,10 +57,28 @@ async function render(): Promise<void> {
     saveBtn.textContent = "saving…";
     status.className = "";
     status.textContent = "";
-    const result: SaveResult = await chrome.runtime.sendMessage({
-      type: "save-current-page",
-      page: { url: tab.url!, title: tab.title ?? tab.url! },
-    });
+    let result: SaveResult;
+    try {
+      const machineId = await getMachineId();
+      const client = new GitHubClient({
+        owner: settings.owner,
+        repo: settings.repo,
+        token: settings.token,
+        branch: settings.branch,
+      });
+      result = await saveBookmark(
+        client,
+        { url: tab.url!, title: tab.title ?? tab.url! },
+        machineId,
+        new Date().toISOString(),
+      );
+    } catch (err) {
+      result = {
+        ok: false,
+        kind: "unknown",
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
     if (result.ok) {
       status.className = "ok";
       status.textContent = "✓ saved";
