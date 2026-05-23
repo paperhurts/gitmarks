@@ -26,7 +26,7 @@ const LAST_ERROR_KEY = "gitmarks:lastError";
 type Pending =
   | { kind: "create"; nodeId: string; url: string; title: string }
   | { kind: "update"; nodeId: string; url?: string; title?: string }
-  | { kind: "remove"; nodeId: string };
+  | { kind: "remove"; nodeId: string; url: string };
 
 export interface ListenerDeps {
   getClient: () => Promise<GitHubClient>;
@@ -38,6 +38,8 @@ export interface ListenerDeps {
 let pending: Pending[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 let deps: ListenerDeps | null = null;
+let flushing = false;
+let pendingReschedule = false;
 
 export function __resetForTest(): void {
   pending = [];
@@ -46,6 +48,8 @@ export function __resetForTest(): void {
     timer = null;
   }
   deps = null;
+  flushing = false;
+  pendingReschedule = false;
 }
 
 export function registerListeners(d: ListenerDeps): void {
@@ -58,19 +62,36 @@ export function registerListeners(d: ListenerDeps): void {
 
 function schedule(): void {
   if (timer != null) return;
+  if (flushing) {
+    pendingReschedule = true;
+    return;
+  }
   timer = setTimeout(() => {
     timer = null;
-    flushPending().catch(async (err) => {
-      console.error("[gitmarks] flushPending failed; pending edits remain queued", err);
-      await chrome.storage.local.set({
-        [LAST_ERROR_KEY]: {
-          when: Date.now(),
-          message: err instanceof Error ? err.message : String(err),
-          source: "flush",
-        },
-      });
-    });
+    void runFlush();
   }, DEBOUNCE_MS);
+}
+
+async function runFlush(): Promise<void> {
+  flushing = true;
+  try {
+    await flushPending();
+  } catch (err) {
+    console.error("[gitmarks] flushPending failed; pending edits remain queued", err);
+    await chrome.storage.local.set({
+      [LAST_ERROR_KEY]: {
+        when: Date.now(),
+        message: err instanceof Error ? err.message : String(err),
+        source: "flush",
+      },
+    });
+  } finally {
+    flushing = false;
+    if (pendingReschedule || pending.length > 0) {
+      pendingReschedule = false;
+      schedule();
+    }
+  }
 }
 
 function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
@@ -99,8 +120,10 @@ function onMoved(_id: string, _moveInfo: chrome.bookmarks.BookmarkMoveInfo): voi
   // Folder updates via onMoved are deferred to v1.5 — next reconcile catches drift.
 }
 
-function onRemoved(id: string, _removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
-  pending.push({ kind: "remove", nodeId: id });
+function onRemoved(id: string, removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
+  // Only sync bookmarks (URL-bearing nodes), not folders.
+  if (removeInfo.node.url == null || removeInfo.node.url.length === 0) return;
+  pending.push({ kind: "remove", nodeId: id, url: removeInfo.node.url });
   schedule();
 }
 
@@ -117,6 +140,7 @@ export async function flushPending(): Promise<void> {
   const surviving = batch.filter((p) => {
     if (p.kind === "create") return !isSuppressed(p.url);
     if (p.kind === "update" && p.url != null) return !isSuppressed(p.url);
+    if (p.kind === "remove") return !isSuppressed(p.url);
     return true;
   });
   if (surviving.length === 0) {
