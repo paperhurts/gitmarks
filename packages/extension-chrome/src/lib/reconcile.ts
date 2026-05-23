@@ -10,11 +10,7 @@ import {
   addBookmark,
 } from "@gitmarks/core";
 import { applyRemoteChanges } from "./apply-remote.js";
-import {
-  saveIdMap,
-  setMapping,
-  type IdMap,
-} from "./id-mapping.js";
+import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const BOOKMARKS_PATH = "bookmarks.json";
@@ -53,7 +49,7 @@ export async function reconcile(
   for (const [url, b] of remoteByUrl) {
     const existing = localByUrl.get(url);
     if (existing != null) {
-      setMapping(idMap, b.id, existing.nodeId);
+      idMap.set(asUlid(b.id), asNodeId(existing.nodeId));
     }
   }
 
@@ -67,7 +63,7 @@ export async function reconcile(
   }
 
   if (localOnly.length === 0) {
-    await saveIdMap(idMap);
+    await idMap.save();
     return;
   }
 
@@ -104,9 +100,9 @@ export async function reconcile(
   );
 
   for (const { entry, bm } of newBookmarks) {
-    setMapping(idMap, bm.id, entry.nodeId);
+    idMap.set(asUlid(bm.id), asNodeId(entry.nodeId));
   }
-  await saveIdMap(idMap);
+  await idMap.save();
 }
 
 async function collectLocalBookmarks(

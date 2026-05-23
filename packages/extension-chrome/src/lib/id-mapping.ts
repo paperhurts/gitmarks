@@ -1,55 +1,93 @@
+// Branded string types — nominal phantom types that prevent argument-swap bugs.
+declare const ulidBrand: unique symbol;
+declare const nodeIdBrand: unique symbol;
+
+export type Ulid = string & { readonly [ulidBrand]: true };
+export type NodeId = string & { readonly [nodeIdBrand]: true };
+
+// Brand constructors. These are unchecked casts — the runtime contract is that
+// callers supply already-validated strings (ULID from @gitmarks/core, nodeId
+// from chrome.bookmarks). At the boundaries that produce these strings we
+// trust them.
+export function asUlid(s: string): Ulid {
+  return s as Ulid;
+}
+export function asNodeId(s: string): NodeId {
+  return s as NodeId;
+}
+
 const KEY = "gitmarks:idMap";
 
-export interface IdMap {
-  ulidToNode: Map<string, string>;
-  nodeToUlid: Map<string, string>;
-}
+/**
+ * Bidirectional ULID ↔ chromeNodeId map persisted in chrome.storage.local.
+ *
+ * Invariant: for every (ulid → nodeId) in one direction there is a
+ * (nodeId → ulid) in the other, and both maps have the same size. This is
+ * enforced by the private fields + the small set of mutator methods below;
+ * external code cannot construct an asymmetric state.
+ */
+export class IdMap {
+  readonly #ulidToNode = new Map<Ulid, NodeId>();
+  readonly #nodeToUlid = new Map<NodeId, Ulid>();
 
-export async function loadIdMap(): Promise<IdMap> {
-  const stored = await chrome.storage.local.get(KEY);
-  const raw = stored[KEY];
-  const map: IdMap = { ulidToNode: new Map(), nodeToUlid: new Map() };
-  if (raw == null || typeof raw !== "object") return map;
-  const obj = raw as { entries?: Array<[string, string]> };
-  if (!Array.isArray(obj.entries)) return map;
-  for (const [ulid, nodeId] of obj.entries) {
-    if (typeof ulid !== "string" || typeof nodeId !== "string") continue;
-    map.ulidToNode.set(ulid, nodeId);
-    map.nodeToUlid.set(nodeId, ulid);
+  static empty(): IdMap {
+    return new IdMap();
   }
-  return map;
-}
 
-export async function saveIdMap(map: IdMap): Promise<void> {
-  const entries = Array.from(map.ulidToNode.entries());
-  await chrome.storage.local.set({ [KEY]: { entries } });
-}
+  static async load(): Promise<IdMap> {
+    const stored = await chrome.storage.local.get(KEY);
+    const raw = stored[KEY];
+    const map = new IdMap();
+    if (raw == null || typeof raw !== "object") return map;
+    const obj = raw as { entries?: Array<[string, string]> };
+    if (!Array.isArray(obj.entries)) return map;
+    for (const [ulid, nodeId] of obj.entries) {
+      if (typeof ulid !== "string" || typeof nodeId !== "string") continue;
+      map.set(asUlid(ulid), asNodeId(nodeId));
+    }
+    return map;
+  }
 
-export function setMapping(map: IdMap, ulid: string, nodeId: string): void {
-  const prevNode = map.ulidToNode.get(ulid);
-  if (prevNode != null) map.nodeToUlid.delete(prevNode);
-  const prevUlid = map.nodeToUlid.get(nodeId);
-  if (prevUlid != null) map.ulidToNode.delete(prevUlid);
-  map.ulidToNode.set(ulid, nodeId);
-  map.nodeToUlid.set(nodeId, ulid);
-}
+  async save(): Promise<void> {
+    const entries = Array.from(this.#ulidToNode.entries());
+    await chrome.storage.local.set({ [KEY]: { entries } });
+  }
 
-export function removeUlidMapping(map: IdMap, ulid: string): void {
-  const nodeId = map.ulidToNode.get(ulid);
-  map.ulidToNode.delete(ulid);
-  if (nodeId != null) map.nodeToUlid.delete(nodeId);
-}
+  /**
+   * Bind a ulid to a nodeId. If either side already had a binding to a
+   * different counterpart, those bindings are cleared first so the
+   * invariant is preserved.
+   */
+  set(ulid: Ulid, nodeId: NodeId): void {
+    const prevNode = this.#ulidToNode.get(ulid);
+    if (prevNode != null) this.#nodeToUlid.delete(prevNode);
+    const prevUlid = this.#nodeToUlid.get(nodeId);
+    if (prevUlid != null) this.#ulidToNode.delete(prevUlid);
+    this.#ulidToNode.set(ulid, nodeId);
+    this.#nodeToUlid.set(nodeId, ulid);
+  }
 
-export function removeNodeMapping(map: IdMap, nodeId: string): void {
-  const ulid = map.nodeToUlid.get(nodeId);
-  map.nodeToUlid.delete(nodeId);
-  if (ulid != null) map.ulidToNode.delete(ulid);
-}
+  removeByUlid(ulid: Ulid): void {
+    const nodeId = this.#ulidToNode.get(ulid);
+    this.#ulidToNode.delete(ulid);
+    if (nodeId != null) this.#nodeToUlid.delete(nodeId);
+  }
 
-export function ulidForNode(map: IdMap, nodeId: string): string | undefined {
-  return map.nodeToUlid.get(nodeId);
-}
+  removeByNode(nodeId: NodeId): void {
+    const ulid = this.#nodeToUlid.get(nodeId);
+    this.#nodeToUlid.delete(nodeId);
+    if (ulid != null) this.#ulidToNode.delete(ulid);
+  }
 
-export function nodeForUlid(map: IdMap, ulid: string): string | undefined {
-  return map.ulidToNode.get(ulid);
+  ulidForNode(nodeId: NodeId): Ulid | undefined {
+    return this.#nodeToUlid.get(nodeId);
+  }
+
+  nodeForUlid(ulid: Ulid): NodeId | undefined {
+    return this.#ulidToNode.get(ulid);
+  }
+
+  get size(): number {
+    return this.#ulidToNode.size;
+  }
 }

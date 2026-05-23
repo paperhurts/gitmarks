@@ -5,7 +5,7 @@ import {
   flushPending,
   __resetForTest,
 } from "../src/lib/listeners.js";
-import { loadIdMap } from "../src/lib/id-mapping.js";
+import { IdMap, asUlid, asNodeId } from "../src/lib/id-mapping.js";
 import { suppress } from "../src/lib/suppression.js";
 
 const BAR = "bar-id";
@@ -28,7 +28,7 @@ describe("listeners", () => {
   it("registerListeners hooks all 4 events", () => {
     registerListeners({
       getClient: async () => fakeClient({}),
-      getIdMap: async () => loadIdMap(),
+      getIdMap: async () => IdMap.load(),
       getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
       getMachineId: async () => machineId,
     });
@@ -44,7 +44,7 @@ describe("listeners", () => {
       return { data: next, sha: "s", etag: "" };
     });
     const client = fakeClient({ update });
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
 
     registerListeners({
       getClient: async () => client,
@@ -74,7 +74,7 @@ describe("listeners", () => {
   it("flush skips events for suppressed URLs", async () => {
     const update = vi.fn(async (_p: string, mutate: any) => ({ data: mutate({ version: 1, updated_at: "x", bookmarks: [] }), sha: "s", etag: "" }));
     const client = fakeClient({ update });
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
 
     registerListeners({
       getClient: async () => client,
@@ -104,7 +104,7 @@ describe("listeners", () => {
 
     registerListeners({
       getClient: async () => client,
-      getIdMap: async () => loadIdMap(),
+      getIdMap: async () => IdMap.load(),
       getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
       getMachineId: async () => machineId,
     });
@@ -141,7 +141,7 @@ describe("listeners", () => {
       return { data: second, sha: "s", etag: "" };
     });
     const client = fakeClient({ update });
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
 
     registerListeners({
       getClient: async () => client,
@@ -194,10 +194,9 @@ describe("listeners", () => {
       return { data: captured, sha: "s", etag: "" };
     });
     const client = fakeClient({ update });
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     // Pre-link the existing bookmark to a chrome node.
-    const { setMapping } = await import("../src/lib/id-mapping.js");
-    setMapping(idMap, "existing-ulid", "node-existing");
+    idMap.set(asUlid("existing-ulid"), asNodeId("node-existing"));
 
     registerListeners({
       getClient: async () => client,
@@ -226,7 +225,7 @@ describe("listeners", () => {
 
     registerListeners({
       getClient: async () => client,
-      getIdMap: async () => loadIdMap(),
+      getIdMap: async () => IdMap.load(),
       getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
       getMachineId: async () => machineId,
     });
@@ -268,9 +267,8 @@ describe("listeners", () => {
       return { data: captured, sha: "s", etag: "" };
     });
     const client = fakeClient({ update });
-    const idMap = await loadIdMap();
-    const { setMapping } = await import("../src/lib/id-mapping.js");
-    setMapping(idMap, "doomed-ulid", "node-doomed");
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("doomed-ulid"), asNodeId("node-doomed"));
 
     registerListeners({
       getClient: async () => client,
@@ -300,9 +298,8 @@ describe("listeners", () => {
   it("onRemoved for a suppressed URL is filtered out (no update)", async () => {
     const update = vi.fn();
     const client = fakeClient({ update });
-    const idMap = await loadIdMap();
-    const { setMapping } = await import("../src/lib/id-mapping.js");
-    setMapping(idMap, "ulid-x", "node-x");
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("ulid-x"), asNodeId("node-x"));
     const { suppress: doSuppress } = await import("../src/lib/suppression.js");
     doSuppress("https://suppressed.example/");
 
@@ -336,7 +333,7 @@ describe("listeners", () => {
 
     registerListeners({
       getClient: async () => client,
-      getIdMap: async () => loadIdMap(),
+      getIdMap: async () => IdMap.load(),
       getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
       getMachineId: async () => machineId,
     });
