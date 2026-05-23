@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>gitmarks — settings</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 480px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        color: #1a1a1a;
+        background: #fafafa;
+      }
+      h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+      label { display: block; margin-bottom: 1rem; }
+      label > span { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; }
+      input { width: 100%; padding: 0.5rem; font: inherit; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+      .row { display: flex; gap: 0.5rem; margin-top: 1.5rem; }
+      button { padding: 0.5rem 1rem; font: inherit; border: 1px solid #444; background: #222; color: white; border-radius: 4px; cursor: pointer; }
+      button.secondary { background: white; color: #222; }
+      #status { margin-top: 1rem; font-size: 0.9rem; min-height: 1.2em; }
+      #status.ok { color: #096; }
+      #status.err { color: #c00; }
+    </style>
+  </head>
+  <body>
+    <h1>gitmarks settings</h1>
+
+    <label>
+      <span>GitHub fine-grained personal access token</span>
+      <input id="token" type="password" autocomplete="off" spellcheck="false" />
+    </label>
+
+    <label>
+      <span>Repo owner (your GitHub login)</span>
+      <input id="owner" type="text" autocomplete="off" spellcheck="false" />
+    </label>
+
+    <label>
+      <span>Repo name</span>
+      <input id="repo" type="text" autocomplete="off" spellcheck="false" />
+    </label>
+
+    <label>
+      <span>Branch</span>
+      <input id="branch" type="text" autocomplete="off" spellcheck="false" value="main" />
+    </label>
+
+    <div class="row">
+      <button id="validate" class="secondary">Validate</button>
+      <button id="save">Save</button>
+    </div>
+
+    <p id="status"></p>
+
+    <script type="module" src="./options.ts"></script>
+  </body>
+</html>
