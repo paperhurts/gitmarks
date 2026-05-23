@@ -1,13 +1,30 @@
 # gitmarks
 
 Serverless cross-browser bookmark sync. Bookmarks live as a JSON file in
-your own private GitHub repo; browser extensions and a web UI both talk
+**your own private GitHub repo**; browser extensions and a web UI both talk
 directly to the GitHub Contents API. No server, no backend, no
-infrastructure to host.
+infrastructure to host. You own your data — it's just a file in a repo
+you control.
 
-**Status:** Chrome extension MVP + native tree sync are working. Firefox /
-Safari / web UI are next in the roadmap. See `spec.md` for the full
-design.
+**Status:** Chrome extension is functional end-to-end (save via toolbar
+button, two-way sync with the native bookmark tree, 5-min poll for remote
+changes, automatic conflict retry). Firefox / Safari / web UI are next in
+the roadmap. See `spec.md` for the full design.
+
+## Features (Chrome, today)
+
+- Save the current tab to GitHub via a toolbar button
+- Drag a URL to your Chrome bookmarks bar → it appears in `bookmarks.json`
+  on GitHub within ~1 second
+- Edit a bookmark's title in Chrome → updates remote within ~1 second
+- Delete a bookmark in Chrome → soft-deleted (tombstoned) remotely;
+  garbage-collected from the JSON after 30 days but retained in git
+  history forever
+- Edit `bookmarks.json` directly on GitHub → changes pull into Chrome
+  on the next 5-minute poll
+- Concurrent edits from multiple devices reconcile automatically via
+  GitHub's file SHA + optimistic retry-replay
+- 112 automated tests (unit + Playwright e2e against real Chromium)
 
 ## Packages
 
@@ -31,7 +48,23 @@ Then in Chrome:
    repo), enter owner/repo/branch, click **Save**
 
 See `packages/extension-chrome/README.md` for the full setup walkthrough,
-the manual smoke test, and architecture notes.
+the manual smoke test checklist, and architecture notes.
+
+## Your data, your PAT
+
+- **The repo must be private.** Public repo + the project name = anyone
+  can find your bookmarks. The extension does NOT enforce this — it's
+  on you when you create the repo on github.com.
+- **Use a fine-grained PAT** scoped to *only* your bookmarks repo with
+  *only* Contents: read/write. Never use a classic PAT or one with broader
+  scopes — if your browser profile is ever exfiltrated, that token only
+  unlocks your bookmarks, not your whole GitHub account.
+- **The PAT is stored in `chrome.storage.local`**, which is origin-scoped
+  (other extensions / sites can't read it) but readable by anyone with
+  access to your unlocked browser profile. Treat it like a saved
+  password.
+- **No telemetry.** The extension only talks to `api.github.com`. That's
+  enforced by the MV3 manifest's `host_permissions`.
 
 ## Development
 
@@ -95,7 +128,21 @@ The load-bearing invariants:
 ## Files in this repo
 
 - `spec.md` — full design spec (source of truth for non-obvious decisions)
+- `CLAUDE.md` — guidance for AI agents working in this repo
 - `docs/superpowers/plans/` — implementation plans, one per branch
 - `packages/*/README.md` — package-specific documentation
 - `examples/example-bookmarks-repo/` — sample `bookmarks.json` + `tags.json`
   to seed a fresh repo, used by `@gitmarks/core` fixture tests
+
+## Contributing
+
+The codebase is plan-driven — each merged branch corresponds to a plan in
+`docs/superpowers/plans/` that decomposes the work into ~10 task-sized
+commits with TDD. New work follows the same shape:
+
+1. Read `spec.md` for the relevant section
+2. Write a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
+3. Execute task-by-task on a feature branch with passing tests at every step
+4. Final review + merge
+
+See existing plans for the template.
