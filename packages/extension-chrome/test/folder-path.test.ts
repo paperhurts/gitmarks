@@ -13,7 +13,10 @@ function n(
   parentId?: string,
   url?: string,
 ): TreeNode {
-  return { id, title, parentId, url };
+  const node: TreeNode = { id, title };
+  if (parentId !== undefined) node.parentId = parentId;
+  if (url !== undefined) node.url = url;
+  return node;
 }
 
 describe("folder-path constants", () => {

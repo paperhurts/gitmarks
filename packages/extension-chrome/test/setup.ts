@@ -37,7 +37,7 @@ const chromeStub = {
     lastError: undefined as chrome.runtime.LastError | undefined,
   },
   bookmarks: {
-    create: vi.fn(async (props: chrome.bookmarks.CreateDetails) => {
+    create: vi.fn(async (props: chrome.bookmarks.BookmarkCreateArg) => {
       return { id: `mock-${Math.random().toString(36).slice(2, 10)}`, ...props } as chrome.bookmarks.BookmarkTreeNode;
     }),
     update: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
