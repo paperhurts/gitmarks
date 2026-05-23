@@ -70,6 +70,7 @@ async function maybeReconcile(): Promise<void> {
   try {
     await reconcile(client, idMap, bar, other, machineId, nowIso);
     await chrome.storage.local.set({ [RECONCILED_AT_KEY]: Date.now() });
+    await chrome.storage.local.remove("gitmarks:lastError");
   } catch (err) {
     console.error("[gitmarks] reconcile failed", err);
     await chrome.storage.local.set({
@@ -101,6 +102,7 @@ async function pollRemoteOnce(): Promise<void> {
     const idMap = await IdMap.load();
     await applyRemoteChanges(result.data, idMap, bar, other);
     await chrome.storage.local.set({ [LAST_ETAG_KEY]: result.etag });
+    await chrome.storage.local.remove("gitmarks:lastError");
   } catch (err) {
     if (err instanceof GitHubNotFoundError) return;
     console.error("[gitmarks] poll failed", err);

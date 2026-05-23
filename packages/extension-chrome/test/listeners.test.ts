@@ -349,4 +349,75 @@ describe("listeners", () => {
 
     expect(update).not.toHaveBeenCalled();
   });
+
+  it("applies exponential backoff after a flush failure", async () => {
+    const update = vi.fn();
+    // Make the first flush fail
+    update.mockRejectedValueOnce(new Error("boom"));
+    // Second flush succeeds
+    update.mockResolvedValueOnce({ data: { version: 1, updated_at: "x", bookmarks: [] }, sha: "s", etag: "" });
+    const client = fakeClient({ update });
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => IdMap.load(),
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    createListener("node-1", {
+      id: "node-1",
+      parentId: BAR,
+      title: "T",
+      url: "https://example.com/x",
+    });
+
+    // First debounce window (500ms) elapses → first flush fails
+    await vi.advanceTimersByTimeAsync(600);
+    expect(update).toHaveBeenCalledTimes(1);
+
+    // Re-schedule should be 1s (500ms * 2^1 = 1000ms) — advance by less and assert no second call yet
+    await vi.advanceTimersByTimeAsync(800);
+    expect(update).toHaveBeenCalledTimes(1);
+
+    // Advance past the backoff threshold
+    await vi.advanceTimersByTimeAsync(400);
+    expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears gitmarks:lastError after a successful flush", async () => {
+    // Seed an error
+    await chrome.storage.local.set({
+      "gitmarks:lastError": { when: 1, message: "old", source: "flush" },
+    });
+
+    const update = vi.fn(async (_p: string, mutate: any) => ({
+      data: mutate({ version: 1, updated_at: "x", bookmarks: [] }),
+      sha: "s",
+      etag: "",
+    }));
+    const client = fakeClient({ update });
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => IdMap.load(),
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    createListener("node-1", {
+      id: "node-1",
+      parentId: BAR,
+      title: "T",
+      url: "https://example.com/y",
+    });
+
+    // Advance past the debounce window to trigger runFlush (which clears the error key on success)
+    await vi.advanceTimersByTimeAsync(600);
+
+    const stored = await chrome.storage.local.get("gitmarks:lastError");
+    expect(stored["gitmarks:lastError"]).toBeUndefined();
+  });
 });
