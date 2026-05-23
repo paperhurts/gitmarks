@@ -10,22 +10,19 @@ import {
   softDeleteBookmark,
   updateBookmark,
 } from "@gitmarks/core";
-import {
-  setMapping,
-  removeNodeMapping,
-  ulidForNode,
-  saveIdMap,
-  type IdMap,
-} from "./id-mapping.js";
+import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { isSuppressed } from "./suppression.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const DEBOUNCE_MS = 500;
+const MAX_BACKOFF_MS = 60_000;
+const LAST_ERROR_KEY = "gitmarks:lastError";
 
 type Pending =
   | { kind: "create"; nodeId: string; url: string; title: string }
-  | { kind: "update"; nodeId: string; url?: string; title?: string }
-  | { kind: "remove"; nodeId: string };
+  | { kind: "update"; nodeId: string; url: string; title?: string }
+  | { kind: "update"; nodeId: string; url?: string; title: string }
+  | { kind: "remove"; nodeId: string; url: string };
 
 export interface ListenerDeps {
   getClient: () => Promise<GitHubClient>;
@@ -37,6 +34,9 @@ export interface ListenerDeps {
 let pending: Pending[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 let deps: ListenerDeps | null = null;
+let flushing = false;
+let pendingReschedule = false;
+let consecutiveFailures = 0;
 
 export function __resetForTest(): void {
   pending = [];
@@ -45,6 +45,9 @@ export function __resetForTest(): void {
     timer = null;
   }
   deps = null;
+  flushing = false;
+  pendingReschedule = false;
+  consecutiveFailures = 0;
 }
 
 export function registerListeners(d: ListenerDeps): void {
@@ -57,10 +60,45 @@ export function registerListeners(d: ListenerDeps): void {
 
 function schedule(): void {
   if (timer != null) return;
+  if (flushing) {
+    pendingReschedule = true;
+    return;
+  }
+  const delay = consecutiveFailures === 0
+    ? DEBOUNCE_MS
+    : Math.min(DEBOUNCE_MS * 2 ** consecutiveFailures, MAX_BACKOFF_MS);
   timer = setTimeout(() => {
     timer = null;
-    void flushPending();
-  }, DEBOUNCE_MS);
+    void runFlush();
+  }, delay);
+}
+
+async function runFlush(): Promise<void> {
+  flushing = true;
+  try {
+    await flushPending();
+    consecutiveFailures = 0;
+    await chrome.storage.local.remove(LAST_ERROR_KEY);
+  } catch (err) {
+    consecutiveFailures += 1;
+    console.error(
+      `[gitmarks] flushPending failed (attempt ${consecutiveFailures}); pending edits remain queued`,
+      err,
+    );
+    await chrome.storage.local.set({
+      [LAST_ERROR_KEY]: {
+        when: Date.now(),
+        message: err instanceof Error ? err.message : String(err),
+        source: "flush",
+      },
+    });
+  } finally {
+    flushing = false;
+    if (pendingReschedule || pending.length > 0) {
+      pendingReschedule = false;
+      schedule();
+    }
+  }
 }
 
 function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
@@ -75,22 +113,27 @@ function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
 }
 
 function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo): void {
-  const patch: { kind: "update"; nodeId: string; url?: string; title?: string } = {
-    kind: "update",
-    nodeId: id,
-    title: changeInfo.title,
-  };
-  if (changeInfo.url !== undefined) patch.url = changeInfo.url;
-  pending.push(patch);
+  const url = changeInfo.url;
+  const title = changeInfo.title;
+  if (url === undefined && title === undefined) return;
+  if (url !== undefined && title !== undefined) {
+    pending.push({ kind: "update", nodeId: id, url, title });
+  } else if (url !== undefined) {
+    pending.push({ kind: "update", nodeId: id, url });
+  } else if (title !== undefined) {
+    pending.push({ kind: "update", nodeId: id, title });
+  }
   schedule();
 }
 
 function onMoved(_id: string, _moveInfo: chrome.bookmarks.BookmarkMoveInfo): void {
-  // Folder updates via onMoved are deferred to v1.5 — next reconcile catches drift.
+  // Folder moves are intentionally not pushed from the listener; the periodic reconcile catches folder drift.
 }
 
-function onRemoved(id: string, _removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
-  pending.push({ kind: "remove", nodeId: id });
+function onRemoved(id: string, removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
+  // Only sync bookmarks (URL-bearing nodes), not folders.
+  if (removeInfo.node.url == null || removeInfo.node.url.length === 0) return;
+  pending.push({ kind: "remove", nodeId: id, url: removeInfo.node.url });
   schedule();
 }
 
@@ -98,8 +141,7 @@ export async function flushPending(): Promise<void> {
   if (deps == null) throw new Error("listeners not registered");
   if (pending.length === 0) return;
 
-  const batch = pending;
-  pending = [];
+  const batch = pending.slice();  // snapshot, but don't clear yet
 
   const idMap = await deps.getIdMap();
   const machineId = await deps.getMachineId();
@@ -108,23 +150,29 @@ export async function flushPending(): Promise<void> {
   const surviving = batch.filter((p) => {
     if (p.kind === "create") return !isSuppressed(p.url);
     if (p.kind === "update" && p.url != null) return !isSuppressed(p.url);
+    if (p.kind === "remove") return !isSuppressed(p.url);
     return true;
   });
-  if (surviving.length === 0) return;
+  if (surviving.length === 0) {
+    pending = [];  // suppression dropped everything; safe to clear
+    return;
+  }
 
   const client = await deps.getClient();
 
-  // Pre-assign ULIDs for creates so the mutate fn is pure (idempotent on retry).
+  // Pre-assign ULIDs for creates so the mutate fn passed to updateBookmarksOrBootstrap
+  // stays pure across its bootstrap + 409 retries (otherwise newUlid() would mint
+  // a different ULID on each invocation).
   const createUlids = new Map<string, string>();
   for (const event of surviving) {
-    if (event.kind === "create" && ulidForNode(idMap, event.nodeId) == null) {
+    if (event.kind === "create" && idMap.ulidForNode(asNodeId(event.nodeId)) == null) {
       createUlids.set(event.nodeId, newUlid());
     }
   }
 
   // Track which mappings need updating after a successful write.
   const toAdd: Array<{ ulid: string; nodeId: string }> = [];
-  const toRemove: string[] = [];
+  const toRemove: string[] = [];  // plain string nodeIds; branded inside loop
 
   await updateBookmarksOrBootstrap(
     client,
@@ -138,15 +186,17 @@ export async function flushPending(): Promise<void> {
     nowIso,
   );
 
-  // Apply id-map side effects once, after the write succeeded.
+  // Only after the update succeeds: apply id-map side effects and clear pending.
   for (const { ulid, nodeId } of toAdd) {
-    setMapping(idMap, ulid, nodeId);
+    idMap.set(asUlid(ulid), asNodeId(nodeId));
   }
   for (const nodeId of toRemove) {
-    removeNodeMapping(idMap, nodeId);
+    idMap.removeByNode(asNodeId(nodeId));
   }
-
-  await saveIdMap(idMap);
+  await idMap.save();
+  // Remove only the events we actually processed; new events arrived during
+  // the await are preserved.
+  pending = pending.slice(batch.length);
 }
 
 function applyBatch(
@@ -162,8 +212,8 @@ function applyBatch(
   let file = initial;
   for (const event of batch) {
     if (event.kind === "create") {
-      // createUlids only contains entries for nodes that were unmapped at flush
-      // time — nodes already in idMap were excluded during pre-computation.
+      // Skip if already mapped — a previous batch already created the remote entry;
+      // treat duplicate create events as no-ops.
       const id = createUlids.get(event.nodeId);
       if (id == null) continue;
       const bm: Bookmark = {
@@ -181,15 +231,22 @@ function applyBatch(
       file = addBookmark(file, bm, nowIso);
       toAdd.push({ ulid: id, nodeId: event.nodeId });
     } else if (event.kind === "update") {
-      const ulid = ulidForNode(idMap, event.nodeId);
+      const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
       if (ulid == null) continue;
+      const existing = file.bookmarks.find((b) => b.id === ulid);
+      if (existing == null) continue;
       const patch: Partial<Omit<Bookmark, "id">> = {};
-      if (event.url != null) patch.url = normalizeUrl(event.url);
-      if (event.title != null) patch.title = event.title;
+      if ("url" in event && event.url !== undefined) {
+        const normalized = normalizeUrl(event.url);
+        if (normalized !== existing.url) patch.url = normalized;
+      }
+      if ("title" in event && event.title !== undefined) {
+        if (event.title !== existing.title) patch.title = event.title;
+      }
       if (Object.keys(patch).length === 0) continue;
       file = updateBookmark(file, ulid, patch, nowIso);
     } else if (event.kind === "remove") {
-      const ulid = ulidForNode(idMap, event.nodeId);
+      const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
       if (ulid == null) continue;
       file = softDeleteBookmark(file, ulid, nowIso);
       toRemove.push(event.nodeId);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { BookmarksFile } from "@gitmarks/core";
 import { applyRemoteChanges } from "../src/lib/apply-remote.js";
-import { loadIdMap, setMapping } from "../src/lib/id-mapping.js";
+import { IdMap, asUlid, asNodeId } from "../src/lib/id-mapping.js";
 import { clearSuppression, isSuppressed } from "../src/lib/suppression.js";
 
 const BAR = "bar-id";
@@ -34,7 +34,7 @@ describe("applyRemoteChanges", () => {
 
   it("creates new bookmarks not in the id map", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/new" });
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
     expect(chrome.bookmarks.create).toHaveBeenCalledWith({
       parentId: BAR,
@@ -46,8 +46,8 @@ describe("applyRemoteChanges", () => {
 
   it("does not create a bookmark already mapped", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/" });
-    const idMap = await loadIdMap();
-    setMapping(idMap, "u1", "node-1");
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
     expect(chrome.bookmarks.create).not.toHaveBeenCalled();
   });
@@ -58,8 +58,8 @@ describe("applyRemoteChanges", () => {
       url: "https://example.com/",
       deleted_at: "2026-05-23T01:00:00Z",
     });
-    const idMap = await loadIdMap();
-    setMapping(idMap, "u1", "node-1");
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
     expect(chrome.bookmarks.remove).toHaveBeenCalledWith("node-1");
     expect(isSuppressed("https://example.com/")).toBe(true);
@@ -67,12 +67,76 @@ describe("applyRemoteChanges", () => {
 
   it("creates _other-rooted bookmarks under Other Bookmarks", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/o", folder: "_other" });
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
     expect(chrome.bookmarks.create).toHaveBeenCalledWith({
       parentId: OTHER,
       title: "Example",
       url: "https://example.com/o",
     });
+  });
+
+  it("creates nested subfolders when applying a remote bookmark in a path", async () => {
+    const bm = bookmark({ id: "u1", url: "https://example.com/nested", folder: "Research/AI" });
+    const idMap = await IdMap.load();
+
+    // First getSubTree call (under BAR): no existing "Research" folder
+    // Second getSubTree call (under the new Research folder): no existing "AI"
+    (chrome.bookmarks.getSubTree as any)
+      .mockResolvedValueOnce([{ id: BAR, children: [] }])
+      .mockResolvedValueOnce([{ id: "research-id", children: [] }]);
+    (chrome.bookmarks.create as any)
+      .mockResolvedValueOnce({ id: "research-id", title: "Research" })  // folder 1
+      .mockResolvedValueOnce({ id: "ai-id", title: "AI" })              // folder 2
+      .mockResolvedValueOnce({ id: "bm-node", url: bm.url, title: bm.title }); // bookmark
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    // Verify the bookmark itself was created under the AI folder
+    const createCalls = (chrome.bookmarks.create as any).mock.calls;
+    const bmCreate = createCalls.find((c: any) => c[0].url === "https://example.com/nested");
+    expect(bmCreate).toBeDefined();
+    expect(bmCreate[0].parentId).toBe("ai-id");
+  });
+
+  it("saves the id map even when a later chrome.bookmarks.create throws", async () => {
+    const bm1 = bookmark({ id: "u1", url: "https://example.com/ok" });
+    const bm2 = bookmark({ id: "u2", url: "https://example.com/fail" });
+    const idMap = await IdMap.load();
+
+    // First create succeeds, second throws.
+    (chrome.bookmarks.create as any)
+      .mockResolvedValueOnce({ id: "node-1", url: bm1.url, title: bm1.title })
+      .mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      applyRemoteChanges(file([bm1, bm2]), idMap, BAR, OTHER),
+    ).rejects.toThrow("boom");
+
+    // The first mapping should still be persisted to storage.
+    const reloaded = await IdMap.load();
+    expect(reloaded.nodeForUlid(asUlid("u1"))).toBe("node-1");
+  });
+
+  it("reuses an existing subfolder when its title matches", async () => {
+    const bm = bookmark({ id: "u1", url: "https://example.com/reuse", folder: "Reading" });
+    const idMap = await IdMap.load();
+
+    // Existing "Reading" folder under BAR
+    (chrome.bookmarks.getSubTree as any).mockResolvedValueOnce([
+      { id: BAR, children: [{ id: "reading-id", title: "Reading" }] },
+    ]);
+    (chrome.bookmarks.create as any).mockResolvedValueOnce({
+      id: "bm-node",
+      url: bm.url,
+      title: bm.title,
+    });
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    // Only one create call (the bookmark itself) — the folder was reused
+    expect((chrome.bookmarks.create as any).mock.calls.length).toBe(1);
+    const bmCreate = (chrome.bookmarks.create as any).mock.calls[0];
+    expect(bmCreate[0].parentId).toBe("reading-id");
   });
 });

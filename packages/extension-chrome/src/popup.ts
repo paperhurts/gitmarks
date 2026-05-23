@@ -1,5 +1,5 @@
 import { GitHubClient } from "@gitmarks/core";
-import { loadSettings } from "./lib/settings.js";
+import { loadSettings, SettingsCorruptError } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
 import { saveBookmark, type SaveResult } from "./lib/save-flow.js";
 
@@ -24,7 +24,21 @@ async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
 }
 
 async function render(): Promise<void> {
-  const settings = await loadSettings();
+  let settings;
+  try {
+    settings = await loadSettings();
+  } catch (err) {
+    if (err instanceof SettingsCorruptError) {
+      root!.innerHTML = `<p class="err">Settings are corrupted — please reconfigure gitmarks.</p>
+        <button id="setup">Open settings</button>`;
+      document.getElementById("setup")?.addEventListener("click", () => {
+        chrome.runtime.openOptionsPage();
+        window.close();
+      });
+      return;
+    }
+    throw err;
+  }
   if (settings == null) {
     root!.innerHTML = `
       <p class="title">Welcome to gitmarks.</p>
@@ -48,6 +62,18 @@ async function render(): Promise<void> {
     <button id="save">Save this page</button>
     <p id="status"></p>
   `;
+
+  const errStored = await chrome.storage.local.get("gitmarks:lastError");
+  const lastErr = errStored["gitmarks:lastError"] as { message: string; source: string; kind?: string } | undefined;
+  if (lastErr != null) {
+    const banner = document.createElement("p");
+    banner.className = "err";
+    banner.style.fontSize = "0.8rem";
+    banner.style.marginTop = "0.5rem";
+    const label = lastErr.kind === "auth" ? "Background sync auth failed" : `Background ${lastErr.source} failed`;
+    banner.textContent = `${label}: ${lastErr.message}`;
+    root!.appendChild(banner);
+  }
 
   const saveBtn = document.getElementById("save") as HTMLButtonElement;
   const status = document.getElementById("status")!;
@@ -102,4 +128,9 @@ function escapeAttr(s: string): string {
   return escapeText(s).replace(/"/g, "&quot;");
 }
 
-void render();
+render().catch((err) => {
+  console.error("[gitmarks] popup render failed", err);
+  if (root != null) {
+    root.innerHTML = `<p class="err">Something went wrong opening gitmarks. Please reload the extension.</p>`;
+  }
+});

@@ -1,11 +1,12 @@
 import {
   GitHubClient,
   GitHubNotFoundError,
+  GitHubAuthError,
   type BookmarksFile,
 } from "@gitmarks/core";
 import { loadSettings, type Settings } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
-import { loadIdMap } from "./lib/id-mapping.js";
+import { IdMap } from "./lib/id-mapping.js";
 import { reconcile } from "./lib/reconcile.js";
 import { registerListeners } from "./lib/listeners.js";
 import { applyRemoteChanges } from "./lib/apply-remote.js";
@@ -24,12 +25,21 @@ async function getBarOtherIds(): Promise<{ bar: string; other: string }> {
   }
   const tree = await chrome.bookmarks.getTree();
   const root = tree[0];
-  if (root?.children == null || root.children.length < 2) {
+  if (root?.children == null) {
     throw new Error("unexpected chrome.bookmarks tree shape");
   }
-  cachedBarId = root.children[0]!.id;
-  cachedOtherId = root.children[1]!.id;
-  return { bar: cachedBarId, other: cachedOtherId };
+  let bar: string | null = null;
+  let other: string | null = null;
+  for (const child of root.children) {
+    if (child.id === "1") bar = child.id;
+    else if (child.id === "2") other = child.id;
+  }
+  if (bar == null || other == null) {
+    throw new Error("could not find Bookmarks Bar (id=1) or Other Bookmarks (id=2) in tree");
+  }
+  cachedBarId = bar;
+  cachedOtherId = other;
+  return { bar, other };
 }
 
 function buildClient(settings: Settings): GitHubClient {
@@ -53,15 +63,24 @@ async function maybeReconcile(): Promise<void> {
 
   const { bar, other } = await getBarOtherIds();
   const client = buildClient(settings);
-  const idMap = await loadIdMap();
+  const idMap = await IdMap.load();
   const machineId = await getMachineId();
   const nowIso = new Date().toISOString();
 
   try {
     await reconcile(client, idMap, bar, other, machineId, nowIso);
     await chrome.storage.local.set({ [RECONCILED_AT_KEY]: Date.now() });
+    await chrome.storage.local.remove("gitmarks:lastError");
   } catch (err) {
-    console.warn("[gitmarks] reconcile failed", err);
+    console.error("[gitmarks] reconcile failed", err);
+    await chrome.storage.local.set({
+      "gitmarks:lastError": {
+        when: Date.now(),
+        message: err instanceof Error ? err.message : String(err),
+        source: "reconcile",
+        kind: err instanceof GitHubAuthError ? "auth" : "unknown",
+      },
+    });
   }
 }
 
@@ -80,28 +99,35 @@ async function pollRemoteOnce(): Promise<void> {
       : await client.read<BookmarksFile>("bookmarks.json");
     if (result == null) return;
     const { bar, other } = await getBarOtherIds();
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await applyRemoteChanges(result.data, idMap, bar, other);
     await chrome.storage.local.set({ [LAST_ETAG_KEY]: result.etag });
+    await chrome.storage.local.remove("gitmarks:lastError");
   } catch (err) {
     if (err instanceof GitHubNotFoundError) return;
-    console.warn("[gitmarks] poll failed", err);
+    console.error("[gitmarks] poll failed", err);
+    await chrome.storage.local.set({
+      "gitmarks:lastError": {
+        when: Date.now(),
+        message: err instanceof Error ? err.message : String(err),
+        source: "poll",
+        kind: err instanceof GitHubAuthError ? "auth" : "unknown",
+      },
+    });
   }
 }
 
-// Listeners
 registerListeners({
   getClient: async () => {
     const s = await loadSettings();
     if (s == null) throw new Error("no settings");
     return buildClient(s);
   },
-  getIdMap: async () => loadIdMap(),
+  getIdMap: async () => IdMap.load(),
   getBarOtherIds,
   getMachineId,
 });
 
-// Periodic poll
 chrome.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POLL_ALARM_NAME) {
@@ -109,5 +135,4 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Initial reconcile if needed
 void maybeReconcile();

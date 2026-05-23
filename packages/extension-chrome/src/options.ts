@@ -1,5 +1,10 @@
-import { GitHubClient, GitHubNotFoundError } from "@gitmarks/core";
-import { loadSettings, saveSettings, type Settings } from "./lib/settings.js";
+import {
+  GitHubClient,
+  GitHubAuthError,
+  GitHubError,
+  GitHubNotFoundError,
+} from "@gitmarks/core";
+import { loadSettings, saveSettings, SettingsCorruptError, type Settings } from "./lib/settings.js";
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -30,7 +35,21 @@ function setStatus(msg: string, kind: "ok" | "err" | "neutral"): void {
 }
 
 async function loadIntoForm(): Promise<void> {
-  const s = await loadSettings();
+  let s;
+  try {
+    s = await loadSettings();
+  } catch (err) {
+    if (err instanceof SettingsCorruptError) {
+      // Clear all form fields so the user can re-enter valid settings.
+      tokenInput.value = "";
+      ownerInput.value = "";
+      repoInput.value = "";
+      branchInput.value = "";
+      setStatus("Stored settings are corrupted — please reconfigure.", "err");
+      return;
+    }
+    throw err;
+  }
   if (s == null) return;
   tokenInput.value = s.token;
   ownerInput.value = s.owner;
@@ -59,6 +78,25 @@ validateBtn.addEventListener("click", async () => {
       );
       return;
     }
+    console.error("[gitmarks] validate failed", err);
+    if (err instanceof GitHubAuthError) {
+      setStatus(
+        "PAT rejected — check the token is valid and has 'Contents: Read and write' scope on this repo.",
+        "err",
+      );
+      return;
+    }
+    if (err instanceof GitHubError && err.status >= 500) {
+      setStatus(
+        `GitHub is having issues (${err.status}). Try again in a minute.`,
+        "err",
+      );
+      return;
+    }
+    if (err instanceof Error && (err.message.includes("Failed to fetch") || err.message.includes("NetworkError"))) {
+      setStatus("Network error — check your connection and try again.", "err");
+      return;
+    }
     setStatus(err instanceof Error ? err.message : String(err), "err");
   }
 });
@@ -68,6 +106,7 @@ saveBtn.addEventListener("click", async () => {
     await saveSettings(readForm());
     setStatus("✓ saved", "ok");
   } catch (err) {
+    console.error("[gitmarks] save settings failed", err);
     setStatus(err instanceof Error ? err.message : String(err), "err");
   }
 });
