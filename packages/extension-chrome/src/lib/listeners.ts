@@ -19,7 +19,8 @@ const LAST_ERROR_KEY = "gitmarks:lastError";
 
 type Pending =
   | { kind: "create"; nodeId: string; url: string; title: string }
-  | { kind: "update"; nodeId: string; url?: string; title?: string }
+  | { kind: "update"; nodeId: string; url: string; title?: string }
+  | { kind: "update"; nodeId: string; url?: string; title: string }
   | { kind: "remove"; nodeId: string; url: string };
 
 export interface ListenerDeps {
@@ -100,13 +101,16 @@ function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
 }
 
 function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo): void {
-  const patch: { kind: "update"; nodeId: string; url?: string; title?: string } = {
-    kind: "update",
-    nodeId: id,
-    title: changeInfo.title,
-  };
-  if (changeInfo.url !== undefined) patch.url = changeInfo.url;
-  pending.push(patch);
+  const url = changeInfo.url;
+  const title = changeInfo.title;
+  if (url === undefined && title === undefined) return;
+  if (url !== undefined && title !== undefined) {
+    pending.push({ kind: "update", nodeId: id, url, title });
+  } else if (url !== undefined) {
+    pending.push({ kind: "update", nodeId: id, url });
+  } else if (title !== undefined) {
+    pending.push({ kind: "update", nodeId: id, title });
+  }
   schedule();
 }
 
@@ -218,6 +222,8 @@ function applyBatch(
       const patch: Partial<Omit<Bookmark, "id">> = {};
       if (event.url != null) patch.url = normalizeUrl(event.url);
       if (event.title != null) patch.title = event.title;
+      // Belt-and-braces: unreachable in practice because the Pending type now
+      // requires at least one of url/title, but kept for defensive correctness.
       if (Object.keys(patch).length === 0) continue;
       file = updateBookmark(file, ulid, patch, nowIso);
     } else if (event.kind === "remove") {
