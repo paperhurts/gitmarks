@@ -25,12 +25,21 @@ async function getBarOtherIds(): Promise<{ bar: string; other: string }> {
   }
   const tree = await chrome.bookmarks.getTree();
   const root = tree[0];
-  if (root?.children == null || root.children.length < 2) {
+  if (root?.children == null) {
     throw new Error("unexpected chrome.bookmarks tree shape");
   }
-  cachedBarId = root.children[0]!.id;
-  cachedOtherId = root.children[1]!.id;
-  return { bar: cachedBarId, other: cachedOtherId };
+  let bar: string | null = null;
+  let other: string | null = null;
+  for (const child of root.children) {
+    if (child.id === "1") bar = child.id;
+    else if (child.id === "2") other = child.id;
+  }
+  if (bar == null || other == null) {
+    throw new Error("could not find Bookmarks Bar (id=1) or Other Bookmarks (id=2) in tree");
+  }
+  cachedBarId = bar;
+  cachedOtherId = other;
+  return { bar, other };
 }
 
 function buildClient(settings: Settings): GitHubClient {
