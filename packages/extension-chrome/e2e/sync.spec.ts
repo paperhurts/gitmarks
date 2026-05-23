@@ -1,37 +1,24 @@
 /**
  * End-to-end tests for native tree sync.
  *
- * PLAYWRIGHT MV3 LIMITATION
- * ─────────────────────────
- * Playwright's serviceWorker.evaluate() runs in an isolated "classic worker"
- * CDP execution context that does NOT share module scope with the background
- * ES module (background.ts). As a consequence:
+ * SCOPE
+ * ─────
+ * These tests exercise the data-flow algorithms (equivalent of flushPending
+ * and pollRemoteOnce) by running them inline inside serviceWorker.evaluate().
+ * They cover:
+ *   • The actual chrome.bookmarks.* API in a real Chromium
+ *   • The actual GitHub API request/response shape
+ *   • The same mock infrastructure that production paths hit at runtime
  *
- *   • chrome.bookmarks.onCreated / onRemoved / onChanged events registered in
- *     background.ts never fire when bookmarks are created from evaluate().
- *   • chrome.alarms.onAlarm does not fire — alarms scheduled via evaluate()
- *     are never dispatched to the module context.
- *   • chrome.runtime.sendMessage from extension pages does not reach
- *     background.ts's onMessage listener.
- *   • chrome.storage.onChanged registered in background.ts does not fire
- *     for writes made from evaluate().
- *   • importScripts() is blocked in module-type service workers.
- *
- * What DOES work:
- *   • globalThis.fetch in the evaluate context IS the patched mock fetch
- *     installed by installGitHubMock().  Both GET and PUT calls to the
- *     GitHub API are intercepted and handled by the in-memory mock.
- *   • chrome.bookmarks.* / chrome.storage.* work normally from evaluate().
- *
- * Because of this isolation, these tests implement the data-flow logic
- * (the equivalent of flushPending and pollRemoteOnce) directly inside
- * serviceWorker.evaluate().  They exercise:
- *   • The actual chrome.bookmarks API
- *   • The actual GitHub API request/response format
- *   • The mock infrastructure (same mock used by the production code path)
- *
- * The production event listener → debounce → flush chain is NOT tested here;
- * that path is covered by the unit tests in test/listeners.test.ts.
+ * What's NOT exercised here: the chrome.bookmarks.* event dispatch into
+ * background.ts's registered listeners. During development we couldn't get
+ * events fired from serviceWorker.evaluate() to reach the module's listeners
+ * within the test timeout — likely a combination of SW eviction timing and
+ * the 500ms debounce window. The root cause wasn't fully isolated; a future
+ * investigation could revisit this. Until then, the production listener →
+ * debounce → flush chain is covered by the unit tests in
+ * test/listeners.test.ts, and the live wiring is verified by the manual
+ * smoke test in README.md.
  */
 import { test, expect } from "./fixtures.js";
 import {

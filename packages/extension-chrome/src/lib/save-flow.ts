@@ -1,6 +1,5 @@
 import type {
   Bookmark,
-  BookmarksFile,
   GitHubClient,
 } from "@gitmarks/core";
 import {
@@ -11,8 +10,7 @@ import {
   addBookmark,
 } from "@gitmarks/core";
 import { buildBookmark } from "./bookmark-factory.js";
-
-const BOOKMARKS_PATH = "bookmarks.json";
+import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 export interface PageInfo {
   url: string;
@@ -26,10 +24,6 @@ export type SaveResult =
       kind: "not_configured" | "auth" | "conflict" | "not_found" | "unknown";
       message: string;
     };
-
-function emptyBookmarksFile(nowIso: string): BookmarksFile {
-  return { version: 1, updated_at: nowIso, bookmarks: [] };
-}
 
 export async function saveBookmark(
   client: GitHubClient,
@@ -46,31 +40,15 @@ export async function saveBookmark(
   const commitMsg = `add bookmark from chrome@${machineId}`;
 
   try {
-    await client.update<BookmarksFile>(
-      BOOKMARKS_PATH,
+    await updateBookmarksOrBootstrap(
+      client,
       (current) => addBookmark(current, bookmark, nowIso),
       commitMsg,
+      machineId,
+      nowIso,
     );
     return { ok: true, bookmark };
   } catch (err) {
-    if (err instanceof GitHubNotFoundError) {
-      // First write ever — create the file, then retry the add.
-      try {
-        await client.write<BookmarksFile>(
-          BOOKMARKS_PATH,
-          emptyBookmarksFile(nowIso),
-          `initialize bookmarks.json from chrome@${machineId}`,
-        );
-        await client.update<BookmarksFile>(
-          BOOKMARKS_PATH,
-          (current) => addBookmark(current, bookmark, nowIso),
-          commitMsg,
-        );
-        return { ok: true, bookmark };
-      } catch (err2) {
-        return classify(err2);
-      }
-    }
     return classify(err);
   }
 }

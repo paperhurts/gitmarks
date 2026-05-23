@@ -15,6 +15,7 @@ import {
   setMapping,
   type IdMap,
 } from "./id-mapping.js";
+import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const BOOKMARKS_PATH = "bookmarks.json";
 
@@ -88,8 +89,8 @@ export async function reconcile(
     newBookmarks.push({ entry: local, bm });
   }
 
-  await client.update<BookmarksFile>(
-    BOOKMARKS_PATH,
+  await updateBookmarksOrBootstrap(
+    client,
     (current) => {
       let next = current;
       for (const { bm } of newBookmarks) {
@@ -98,6 +99,8 @@ export async function reconcile(
       return next;
     },
     `initial reconciliation from chrome@${machineId}`,
+    machineId,
+    nowIso,
   );
 
   for (const { entry, bm } of newBookmarks) {
