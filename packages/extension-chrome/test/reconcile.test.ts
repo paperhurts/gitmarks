@@ -4,6 +4,7 @@ import type {
   GitHubClient,
   Bookmark,
 } from "@gitmarks/core";
+import { GitHubNotFoundError } from "@gitmarks/core";
 import { reconcile } from "../src/lib/reconcile.js";
 import { loadIdMap, nodeForUlid } from "../src/lib/id-mapping.js";
 
@@ -121,5 +122,43 @@ describe("reconcile", () => {
     expect(chrome.bookmarks.create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
     expect(nodeForUlid(idMap, "u-existing")).toBe("node-existing");
+  });
+
+  it("treats a 404 on read as an empty remote and pushes local-only bookmarks", async () => {
+    // reconcile() handles the 404 from client.read() itself — it falls back to an
+    // empty remote in-memory.  It then calls updateBookmarksOrBootstrap to push
+    // local-only bookmarks; since client.update() succeeds immediately, client.write()
+    // (the bootstrap path) is never triggered.
+    const read = vi.fn(async () => {
+      throw new GitHubNotFoundError("bookmarks.json");
+    });
+    let written: BookmarksFile | null = null;
+    const write = vi.fn(async () => ({ sha: "s0", etag: "" }));
+    const update = vi.fn(async (_p: string, mutate: any) => {
+      written = mutate({ version: 1, updated_at: nowIso, bookmarks: [] });
+      return { data: written, sha: "s1", etag: "" };
+    });
+    const client = fakeClient({ read, write, update });
+
+    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+      { id: "root", children: [
+        { id: BAR, title: "Bookmarks Bar", children: [
+          { id: "node-local", parentId: BAR, title: "Local", url: "https://local.example/" },
+        ] },
+        { id: OTHER, title: "Other Bookmarks", children: [] },
+      ] },
+    ]);
+
+    const idMap = await loadIdMap();
+    await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
+
+    // update() is called to push the local-only bookmark to the (empty) remote.
+    expect(update).toHaveBeenCalled();
+    expect(written).not.toBeNull();
+    expect(written!.bookmarks.length).toBe(1);
+    expect(written!.bookmarks[0]!.url).toBe("https://local.example/");
+    // write() is NOT called because update() succeeds on the first try
+    // (the 404 was already handled by reconcile's own read-catch, not by update).
+    expect(write).not.toHaveBeenCalled();
   });
 });

@@ -75,4 +75,49 @@ describe("applyRemoteChanges", () => {
       url: "https://example.com/o",
     });
   });
+
+  it("creates nested subfolders when applying a remote bookmark in a path", async () => {
+    const bm = bookmark({ id: "u1", url: "https://example.com/nested", folder: "Research/AI" });
+    const idMap = await loadIdMap();
+
+    // First getSubTree call (under BAR): no existing "Research" folder
+    // Second getSubTree call (under the new Research folder): no existing "AI"
+    (chrome.bookmarks.getSubTree as any)
+      .mockResolvedValueOnce([{ id: BAR, children: [] }])
+      .mockResolvedValueOnce([{ id: "research-id", children: [] }]);
+    (chrome.bookmarks.create as any)
+      .mockResolvedValueOnce({ id: "research-id", title: "Research" })  // folder 1
+      .mockResolvedValueOnce({ id: "ai-id", title: "AI" })              // folder 2
+      .mockResolvedValueOnce({ id: "bm-node", url: bm.url, title: bm.title }); // bookmark
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    // Verify the bookmark itself was created under the AI folder
+    const createCalls = (chrome.bookmarks.create as any).mock.calls;
+    const bmCreate = createCalls.find((c: any) => c[0].url === "https://example.com/nested");
+    expect(bmCreate).toBeDefined();
+    expect(bmCreate[0].parentId).toBe("ai-id");
+  });
+
+  it("reuses an existing subfolder when its title matches", async () => {
+    const bm = bookmark({ id: "u1", url: "https://example.com/reuse", folder: "Reading" });
+    const idMap = await loadIdMap();
+
+    // Existing "Reading" folder under BAR
+    (chrome.bookmarks.getSubTree as any).mockResolvedValueOnce([
+      { id: BAR, children: [{ id: "reading-id", title: "Reading" }] },
+    ]);
+    (chrome.bookmarks.create as any).mockResolvedValueOnce({
+      id: "bm-node",
+      url: bm.url,
+      title: bm.title,
+    });
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    // Only one create call (the bookmark itself) — the folder was reused
+    expect((chrome.bookmarks.create as any).mock.calls.length).toBe(1);
+    const bmCreate = (chrome.bookmarks.create as any).mock.calls[0];
+    expect(bmCreate[0].parentId).toBe("reading-id");
+  });
 });
