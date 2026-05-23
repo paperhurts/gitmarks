@@ -75,12 +75,13 @@ function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
 }
 
 function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo): void {
-  pending.push({
+  const patch: { kind: "update"; nodeId: string; url?: string; title?: string } = {
     kind: "update",
     nodeId: id,
-    url: changeInfo.url,
     title: changeInfo.title,
-  });
+  };
+  if (changeInfo.url !== undefined) patch.url = changeInfo.url;
+  pending.push(patch);
   schedule();
 }
 
