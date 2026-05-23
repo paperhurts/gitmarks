@@ -10,13 +10,7 @@ import {
   softDeleteBookmark,
   updateBookmark,
 } from "@gitmarks/core";
-import {
-  setMapping,
-  removeNodeMapping,
-  ulidForNode,
-  saveIdMap,
-  type IdMap,
-} from "./id-mapping.js";
+import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { isSuppressed } from "./suppression.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
@@ -153,14 +147,14 @@ export async function flushPending(): Promise<void> {
   // Pre-assign ULIDs for creates so the mutate fn is pure (idempotent on retry).
   const createUlids = new Map<string, string>();
   for (const event of surviving) {
-    if (event.kind === "create" && ulidForNode(idMap, event.nodeId) == null) {
+    if (event.kind === "create" && idMap.ulidForNode(asNodeId(event.nodeId)) == null) {
       createUlids.set(event.nodeId, newUlid());
     }
   }
 
   // Track which mappings need updating after a successful write.
   const toAdd: Array<{ ulid: string; nodeId: string }> = [];
-  const toRemove: string[] = [];
+  const toRemove: string[] = [];  // plain string nodeIds; branded inside loop
 
   await updateBookmarksOrBootstrap(
     client,
@@ -176,12 +170,12 @@ export async function flushPending(): Promise<void> {
 
   // Only after the update succeeds: apply id-map side effects and clear pending.
   for (const { ulid, nodeId } of toAdd) {
-    setMapping(idMap, ulid, nodeId);
+    idMap.set(asUlid(ulid), asNodeId(nodeId));
   }
   for (const nodeId of toRemove) {
-    removeNodeMapping(idMap, nodeId);
+    idMap.removeByNode(asNodeId(nodeId));
   }
-  await saveIdMap(idMap);
+  await idMap.save();
   // Remove only the events we actually processed; new events arrived during
   // the await are preserved.
   pending = pending.slice(batch.length);
@@ -219,7 +213,7 @@ function applyBatch(
       file = addBookmark(file, bm, nowIso);
       toAdd.push({ ulid: id, nodeId: event.nodeId });
     } else if (event.kind === "update") {
-      const ulid = ulidForNode(idMap, event.nodeId);
+      const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
       if (ulid == null) continue;
       const patch: Partial<Omit<Bookmark, "id">> = {};
       if (event.url != null) patch.url = normalizeUrl(event.url);
@@ -227,7 +221,7 @@ function applyBatch(
       if (Object.keys(patch).length === 0) continue;
       file = updateBookmark(file, ulid, patch, nowIso);
     } else if (event.kind === "remove") {
-      const ulid = ulidForNode(idMap, event.nodeId);
+      const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
       if (ulid == null) continue;
       file = softDeleteBookmark(file, ulid, nowIso);
       toRemove.push(event.nodeId);

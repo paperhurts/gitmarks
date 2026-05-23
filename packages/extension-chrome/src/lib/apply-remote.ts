@@ -1,11 +1,5 @@
 import type { BookmarksFile } from "@gitmarks/core";
-import {
-  saveIdMap,
-  setMapping,
-  removeUlidMapping,
-  nodeForUlid,
-  type IdMap,
-} from "./id-mapping.js";
+import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
 import { suppress } from "./suppression.js";
 
@@ -16,19 +10,19 @@ export async function applyRemoteChanges(
   otherBookmarksId: string,
 ): Promise<void> {
   for (const bm of remote.bookmarks) {
-    const existingNode = nodeForUlid(idMap, bm.id);
+    const existingNode = idMap.nodeForUlid(asUlid(bm.id));
 
     if (bm.deleted_at != null) {
       if (existingNode != null) {
         suppress(bm.url);
         try {
           await chrome.bookmarks.remove(existingNode);
-          removeUlidMapping(idMap, bm.id);
+          idMap.removeByUlid(asUlid(bm.id));
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes("Can't find bookmark") || msg.includes("not found")) {
             // Local node already gone — safe to clear the mapping too.
-            removeUlidMapping(idMap, bm.id);
+            idMap.removeByUlid(asUlid(bm.id));
           } else {
             // Real failure (managed bookmarks, permissions, etc.) — keep the mapping
             // and re-throw so the caller knows the apply was partial.
@@ -58,9 +52,9 @@ export async function applyRemoteChanges(
       title: bm.title,
       url: bm.url,
     });
-    setMapping(idMap, bm.id, created.id);
+    idMap.set(asUlid(bm.id), asNodeId(created.id));
   }
-  await saveIdMap(idMap);
+  await idMap.save();
 }
 
 async function ensureFolderPath(

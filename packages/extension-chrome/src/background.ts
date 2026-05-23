@@ -6,7 +6,7 @@ import {
 } from "@gitmarks/core";
 import { loadSettings, type Settings } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
-import { loadIdMap } from "./lib/id-mapping.js";
+import { IdMap } from "./lib/id-mapping.js";
 import { reconcile } from "./lib/reconcile.js";
 import { registerListeners } from "./lib/listeners.js";
 import { applyRemoteChanges } from "./lib/apply-remote.js";
@@ -54,7 +54,7 @@ async function maybeReconcile(): Promise<void> {
 
   const { bar, other } = await getBarOtherIds();
   const client = buildClient(settings);
-  const idMap = await loadIdMap();
+  const idMap = await IdMap.load();
   const machineId = await getMachineId();
   const nowIso = new Date().toISOString();
 
@@ -89,7 +89,7 @@ async function pollRemoteOnce(): Promise<void> {
       : await client.read<BookmarksFile>("bookmarks.json");
     if (result == null) return;
     const { bar, other } = await getBarOtherIds();
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await applyRemoteChanges(result.data, idMap, bar, other);
     await chrome.storage.local.set({ [LAST_ETAG_KEY]: result.etag });
   } catch (err) {
@@ -113,7 +113,7 @@ registerListeners({
     if (s == null) throw new Error("no settings");
     return buildClient(s);
   },
-  getIdMap: async () => loadIdMap(),
+  getIdMap: async () => IdMap.load(),
   getBarOtherIds,
   getMachineId,
 });

@@ -6,7 +6,7 @@ import type {
 } from "@gitmarks/core";
 import { GitHubNotFoundError } from "@gitmarks/core";
 import { reconcile } from "../src/lib/reconcile.js";
-import { loadIdMap, nodeForUlid } from "../src/lib/id-mapping.js";
+import { IdMap, asUlid } from "../src/lib/id-mapping.js";
 
 const BAR = "bar-id";
 const OTHER = "other-id";
@@ -54,7 +54,7 @@ describe("reconcile", () => {
       ] },
     ]);
 
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
     expect(chrome.bookmarks.create).toHaveBeenCalledWith({
@@ -87,14 +87,14 @@ describe("reconcile", () => {
       ] },
     ]);
 
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
     expect(written).not.toBeNull();
     expect(written!.bookmarks.length).toBe(1);
     expect(written!.bookmarks[0]!.url).toBe("https://local.example/");
     expect(written!.bookmarks[0]!.added_from).toBe("chrome@ABCDE12F");
-    expect(nodeForUlid(idMap, written!.bookmarks[0]!.id)).toBe("node-1");
+    expect(idMap.nodeForUlid(asUlid(written!.bookmarks[0]!.id))).toBe("node-1");
   });
 
   it("does nothing when local and remote already agree by URL", async () => {
@@ -116,12 +116,12 @@ describe("reconcile", () => {
       ] },
     ]);
 
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
     expect(chrome.bookmarks.create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
-    expect(nodeForUlid(idMap, "u-existing")).toBe("node-existing");
+    expect(idMap.nodeForUlid(asUlid("u-existing"))).toBe("node-existing");
   });
 
   it("treats a 404 on read as an empty remote and pushes local-only bookmarks", async () => {
@@ -149,7 +149,7 @@ describe("reconcile", () => {
       ] },
     ]);
 
-    const idMap = await loadIdMap();
+    const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
     // update() is called to push the local-only bookmark to the (empty) remote.
