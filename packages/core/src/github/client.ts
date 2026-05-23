@@ -6,6 +6,10 @@ import {
 } from "./errors.js";
 import { decodeBase64Utf8, encodeBase64Utf8 } from "./base64.js";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface GitHubClientOptions {
   owner: string;
   repo: string;
@@ -147,5 +151,42 @@ export class GitHubClient {
       sha: respBody.content.sha,
       etag: res.headers.get("etag") ?? "",
     };
+  }
+
+  /**
+   * Read → mutate → write with optimistic concurrency.
+   *
+   * The `mutate` function MUST be pure: it receives the latest server-side
+   * data and returns the next value. On a 409 (someone else wrote first),
+   * the client re-reads and calls `mutate` again against the fresh data —
+   * which is only safe if `mutate` does not close over stale state.
+   */
+  async update<T>(
+    path: string,
+    mutate: (current: T) => T,
+    message: string,
+    opts: { maxAttempts?: number; baseDelayMs?: number } = {},
+  ): Promise<ReadResult<T>> {
+    const maxAttempts = opts.maxAttempts ?? 3;
+    const baseDelayMs = opts.baseDelayMs ?? 200;
+    let lastConflict: GitHubConflictError | null = null;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const current = await this.read<T>(path);
+      const next = mutate(current.data);
+      try {
+        const written = await this.write<T>(path, next, message, {
+          prevSha: current.sha,
+        });
+        return { data: next, sha: written.sha, etag: written.etag };
+      } catch (err) {
+        if (!(err instanceof GitHubConflictError)) throw err;
+        lastConflict = err;
+        if (attempt < maxAttempts - 1) {
+          await sleep(baseDelayMs * 2 ** attempt);
+        }
+      }
+    }
+    throw lastConflict ?? new GitHubConflictError(path);
   }
 }
