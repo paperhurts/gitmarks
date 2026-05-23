@@ -18,9 +18,9 @@ import {
   type IdMap,
 } from "./id-mapping.js";
 import { isSuppressed } from "./suppression.js";
+import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const DEBOUNCE_MS = 500;
-const BOOKMARKS_PATH = "bookmarks.json";
 
 type Pending =
   | { kind: "create"; nodeId: string; url: string; title: string }
@@ -126,14 +126,16 @@ export async function flushPending(): Promise<void> {
   const toAdd: Array<{ ulid: string; nodeId: string }> = [];
   const toRemove: string[] = [];
 
-  await client.update<BookmarksFile>(
-    BOOKMARKS_PATH,
+  await updateBookmarksOrBootstrap(
+    client,
     (current) => {
       toAdd.length = 0;
       toRemove.length = 0;
       return applyBatch(current, surviving, idMap, createUlids, machineId, nowIso, toAdd, toRemove);
     },
     `sync ${surviving.length} change(s) from chrome@${machineId}`,
+    machineId,
+    nowIso,
   );
 
   // Apply id-map side effects once, after the write succeeded.

@@ -178,14 +178,18 @@ GitHub API via Playwright route interception, and exercise:
 - `chrome.bookmarks.create` → expected PUT payload
 - Remote add seeded into the mock → bookmark appears in local tree
 
-**Known limitation:** Playwright 1.x's `serviceWorker.evaluate()` runs in
-a V8 context isolated from the extension's `background.ts` module scope.
-Chrome events dispatched from `evaluate()` don't reach the listeners
-registered by the module. The e2e sync tests inline the equivalent
-algorithm into the evaluate context where the mocked `fetch` is
-accessible; the actual listener-debounce-flush dispatch path in
-`background.ts` is verified by the unit tests and by the manual smoke
-test above.
+**Known gap (not fully understood):** during development we couldn't
+reliably get `chrome.bookmarks.*` events dispatched from
+`serviceWorker.evaluate()` to reach listeners registered by `background.ts`
+within Playwright's default timeouts. Suspected causes: SW eviction
+between test setup and event dispatch, plus the 500ms debounce window
+combined with the GitHub round-trip running longer than `actionTimeout`.
+The root cause wasn't fully isolated. As a workaround, the e2e sync
+tests inline the equivalent algorithm into the evaluate context (where
+the mocked `fetch` IS accessible — strong hint that the contexts aren't
+truly isolated). The listener-debounce-flush dispatch path is verified
+by unit tests; the live wiring is verified by the manual smoke test
+above.
 
 ## Out of scope
 
