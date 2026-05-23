@@ -36,6 +36,25 @@ const chromeStub = {
     onMessage: { addListener: vi.fn() },
     lastError: undefined as chrome.runtime.LastError | undefined,
   },
+  bookmarks: {
+    create: vi.fn(async (props: chrome.bookmarks.CreateDetails) => {
+      return { id: `mock-${Math.random().toString(36).slice(2, 10)}`, ...props } as chrome.bookmarks.BookmarkTreeNode;
+    }),
+    update: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
+    move: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
+    remove: vi.fn(async () => {}),
+    getTree: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
+    getSubTree: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
+    onCreated: { addListener: vi.fn(), removeListener: vi.fn() },
+    onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+    onMoved: { addListener: vi.fn(), removeListener: vi.fn() },
+    onRemoved: { addListener: vi.fn(), removeListener: vi.fn() },
+  },
+  alarms: {
+    create: vi.fn(),
+    clear: vi.fn(),
+    onAlarm: { addListener: vi.fn() },
+  },
   tabs: {
     query: vi.fn(),
   },
