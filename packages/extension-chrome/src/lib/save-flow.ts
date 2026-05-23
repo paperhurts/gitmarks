@@ -10,7 +10,6 @@ import {
   GitHubNotFoundError,
   addBookmark,
 } from "@gitmarks/core";
-import type { Settings } from "./settings.js";
 import { buildBookmark } from "./bookmark-factory.js";
 
 const BOOKMARKS_PATH = "bookmarks.json";
@@ -22,7 +21,11 @@ export interface PageInfo {
 
 export type SaveResult =
   | { ok: true; bookmark: Bookmark }
-  | { ok: false; kind: "auth" | "conflict" | "not_found" | "unknown"; message: string };
+  | {
+      ok: false;
+      kind: "not_configured" | "auth" | "conflict" | "not_found" | "unknown";
+      message: string;
+    };
 
 function emptyBookmarksFile(nowIso: string): BookmarksFile {
   return { version: 1, updated_at: nowIso, bookmarks: [] };
@@ -30,7 +33,6 @@ function emptyBookmarksFile(nowIso: string): BookmarksFile {
 
 export async function saveBookmark(
   client: GitHubClient,
-  _settings: Settings,
   page: PageInfo,
   machineId: string,
   nowIso: string,

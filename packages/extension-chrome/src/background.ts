@@ -23,7 +23,7 @@ async function handleSavePage(page: PageInfo): Promise<SaveResult> {
   if (settings == null) {
     return {
       ok: false,
-      kind: "auth",
+      kind: "not_configured",
       message: "gitmarks is not configured. Open Options to set up.",
     };
   }
@@ -34,5 +34,5 @@ async function handleSavePage(page: PageInfo): Promise<SaveResult> {
     token: settings.token,
     branch: settings.branch,
   });
-  return saveBookmark(client, settings, page, machineId, new Date().toISOString());
+  return saveBookmark(client, page, machineId, new Date().toISOString());
 }
