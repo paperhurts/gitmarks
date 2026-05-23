@@ -1,5 +1,5 @@
 import { GitHubClient, GitHubNotFoundError } from "@gitmarks/core";
-import { loadSettings, saveSettings, type Settings } from "./lib/settings.js";
+import { loadSettings, saveSettings, SettingsCorruptError, type Settings } from "./lib/settings.js";
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -30,7 +30,21 @@ function setStatus(msg: string, kind: "ok" | "err" | "neutral"): void {
 }
 
 async function loadIntoForm(): Promise<void> {
-  const s = await loadSettings();
+  let s;
+  try {
+    s = await loadSettings();
+  } catch (err) {
+    if (err instanceof SettingsCorruptError) {
+      // Clear all form fields so the user can re-enter valid settings.
+      tokenInput.value = "";
+      ownerInput.value = "";
+      repoInput.value = "";
+      branchInput.value = "";
+      setStatus("Stored settings are corrupted — please reconfigure.", "err");
+      return;
+    }
+    throw err;
+  }
   if (s == null) return;
   tokenInput.value = s.token;
   ownerInput.value = s.owner;

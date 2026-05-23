@@ -1,6 +1,7 @@
 import {
   GitHubClient,
   GitHubNotFoundError,
+  GitHubAuthError,
   type BookmarksFile,
 } from "@gitmarks/core";
 import { loadSettings, type Settings } from "./lib/settings.js";
@@ -61,7 +62,15 @@ async function maybeReconcile(): Promise<void> {
     await reconcile(client, idMap, bar, other, machineId, nowIso);
     await chrome.storage.local.set({ [RECONCILED_AT_KEY]: Date.now() });
   } catch (err) {
-    console.warn("[gitmarks] reconcile failed", err);
+    console.error("[gitmarks] reconcile failed", err);
+    await chrome.storage.local.set({
+      "gitmarks:lastError": {
+        when: Date.now(),
+        message: err instanceof Error ? err.message : String(err),
+        source: "reconcile",
+        kind: err instanceof GitHubAuthError ? "auth" : "unknown",
+      },
+    });
   }
 }
 
@@ -85,7 +94,15 @@ async function pollRemoteOnce(): Promise<void> {
     await chrome.storage.local.set({ [LAST_ETAG_KEY]: result.etag });
   } catch (err) {
     if (err instanceof GitHubNotFoundError) return;
-    console.warn("[gitmarks] poll failed", err);
+    console.error("[gitmarks] poll failed", err);
+    await chrome.storage.local.set({
+      "gitmarks:lastError": {
+        when: Date.now(),
+        message: err instanceof Error ? err.message : String(err),
+        source: "poll",
+        kind: err instanceof GitHubAuthError ? "auth" : "unknown",
+      },
+    });
   }
 }
 
