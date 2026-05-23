@@ -30,6 +30,9 @@ importers:
       '@gitmarks/core':
         specifier: workspace:*
         version: link:../core
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
     devDependencies:
       '@crxjs/vite-plugin':
         specifier: ^2.0.0-beta.28
