@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["chrome", "vite/client"],
+    "rootDir": "./",
+    "outDir": "./dist-tsc",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "manifest.config.ts", "vite.config.ts", "vitest.config.ts"]
+}

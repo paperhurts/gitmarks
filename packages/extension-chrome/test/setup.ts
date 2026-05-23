@@ -1,0 +1,51 @@
+import { vi, beforeEach } from "vitest";
+
+interface StorageBackend {
+  data: Record<string, unknown>;
+}
+
+const backend: StorageBackend = { data: {} };
+
+const chromeStub = {
+  storage: {
+    local: {
+      get: vi.fn(async (keys?: string | string[] | null) => {
+        if (keys == null) return { ...backend.data };
+        const list = Array.isArray(keys) ? keys : [keys];
+        const out: Record<string, unknown> = {};
+        for (const k of list) {
+          if (k in backend.data) out[k] = backend.data[k];
+        }
+        return out;
+      }),
+      set: vi.fn(async (items: Record<string, unknown>) => {
+        Object.assign(backend.data, items);
+      }),
+      remove: vi.fn(async (keys: string | string[]) => {
+        const list = Array.isArray(keys) ? keys : [keys];
+        for (const k of list) delete backend.data[k];
+      }),
+      clear: vi.fn(async () => {
+        for (const k of Object.keys(backend.data)) delete backend.data[k];
+      }),
+    },
+  },
+  runtime: {
+    openOptionsPage: vi.fn(),
+    sendMessage: vi.fn(),
+    onMessage: { addListener: vi.fn() },
+    lastError: undefined as chrome.runtime.LastError | undefined,
+  },
+  tabs: {
+    query: vi.fn(),
+  },
+};
+
+vi.stubGlobal("chrome", chromeStub);
+
+beforeEach(async () => {
+  await chromeStub.storage.local.clear();
+  vi.clearAllMocks();
+});
+
+export { chromeStub };

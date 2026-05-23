@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>gitmarks</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #fafafa;
+        color: #1a1a1a;
+        min-width: 240px;
+      }
+      main { padding: 1rem; }
+      button {
+        width: 100%;
+        padding: 0.6rem;
+        font: inherit;
+        border: 1px solid #444;
+        background: #222;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: progress; }
+      #status { margin-top: 0.75rem; font-size: 0.85rem; min-height: 1.2em; }
+      #status.ok { color: #096; }
+      #status.err { color: #c00; }
+      .title { font-size: 0.85rem; color: #555; margin: 0 0 0.5rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <main id="root">loading…</main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
