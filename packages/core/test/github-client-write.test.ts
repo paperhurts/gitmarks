@@ -58,13 +58,15 @@ describe("GitHubClient.write", () => {
     });
   });
 
-  it("PUTs without sha when prevSha is omitted (create)", async () => {
+  it("PUTs without sha when prevSha is omitted (create) and returns the new sha", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      mockResponse(201, { content: { sha: "firstsha" } }),
+      mockResponse(201, { content: { sha: "firstsha" } }, { etag: '"e-create"' }),
     );
     const client = mkClient(fetchMock);
 
-    await client.write("bookmarks.json", { v: 1 }, "create");
+    const result = await client.write("bookmarks.json", { v: 1 }, "create");
+    expect(result).toEqual({ sha: "firstsha", etag: '"e-create"' });
+
     const [, init] = fetchMock.mock.calls[0]!;
     const sentBody = JSON.parse(init!.body as string);
     expect(sentBody).not.toHaveProperty("sha");
@@ -78,12 +80,16 @@ describe("GitHubClient.write", () => {
     ).rejects.toBeInstanceOf(GitHubConflictError);
   });
 
-  it("throws GitHubConflictError on 422 (GitHub returns this for SHA mismatch sometimes)", async () => {
+  it("throws GitHubConflictError on 422 with status preserved", async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse(422, {}));
     const client = mkClient(fetchMock);
-    await expect(
-      client.write("bookmarks.json", {}, "msg", { prevSha: "old" }),
-    ).rejects.toBeInstanceOf(GitHubConflictError);
+    try {
+      await client.write("bookmarks.json", {}, "msg", { prevSha: "old" });
+      throw new Error("expected to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(GitHubConflictError);
+      expect((err as GitHubConflictError).status).toBe(422);
+    }
   });
 
   it("throws GitHubAuthError on 401", async () => {
