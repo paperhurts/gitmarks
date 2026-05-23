@@ -25,11 +25,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Build core first so its dist/index.d.ts exists for downstream
+      # workspace consumers (extension-chrome resolves @gitmarks/core
+      # via the package.json "types" field).
+      - name: Build core
+        run: pnpm --filter @gitmarks/core build
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Unit tests
         run: pnpm test
 
-      - name: Build
+      - name: Build everything
         run: pnpm build
