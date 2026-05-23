@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-23T14:32:11Z",
+  "bookmarks": [
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C1",
+      "url": "https://news.ycombinator.com/",
+      "title": "Hacker News",
+      "folder": "",
+      "tags": ["daily"],
+      "added_at": "2026-05-01T08:00:00Z",
+      "updated_at": "2026-05-01T08:00:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C2",
+      "url": "https://lobste.rs/",
+      "title": "Lobsters",
+      "folder": "",
+      "tags": ["daily"],
+      "added_at": "2026-05-01T08:01:00Z",
+      "updated_at": "2026-05-01T08:01:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C3",
+      "url": "https://arxiv.org/abs/2310.00001",
+      "title": "Example arXiv paper",
+      "folder": "Research/AI",
+      "tags": ["to-read", "claudepi"],
+      "added_at": "2026-05-02T09:00:00Z",
+      "updated_at": "2026-05-02T09:00:00Z",
+      "added_from": "firefox@minerva",
+      "deleted_at": null,
+      "notes": "Skim section 3 first"
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C4",
+      "url": "https://github.com/anthropics/anthropic-sdk-typescript",
+      "title": "Anthropic SDK (TypeScript)",
+      "folder": "Dev/SDKs",
+      "tags": ["reference"],
+      "added_at": "2026-05-03T10:00:00Z",
+      "updated_at": "2026-05-03T10:00:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C5",
+      "url": "https://docs.github.com/en/rest/repos/contents",
+      "title": "GitHub Contents API",
+      "folder": "Dev/Docs",
+      "tags": ["reference"],
+      "added_at": "2026-05-04T11:00:00Z",
+      "updated_at": "2026-05-04T11:00:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C6",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/bookmarks",
+      "title": "chrome.bookmarks API",
+      "folder": "Dev/Docs",
+      "tags": ["reference"],
+      "added_at": "2026-05-05T12:00:00Z",
+      "updated_at": "2026-05-05T12:00:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C7",
+      "url": "https://en.wikipedia.org/wiki/ULID",
+      "title": "ULID — Wikipedia",
+      "folder": "Reading",
+      "tags": [],
+      "added_at": "2026-05-06T13:00:00Z",
+      "updated_at": "2026-05-06T13:00:00Z",
+      "added_from": "firefox@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C8",
+      "url": "https://tailwindcss.com/docs",
+      "title": "Tailwind CSS Docs",
+      "folder": "Dev/Docs",
+      "tags": ["reference"],
+      "added_at": "2026-05-07T14:00:00Z",
+      "updated_at": "2026-05-07T14:00:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0C9",
+      "url": "https://vitest.dev/guide/",
+      "title": "Vitest Guide",
+      "folder": "Dev/Docs",
+      "tags": ["reference"],
+      "added_at": "2026-05-08T15:00:00Z",
+      "updated_at": "2026-05-08T15:00:00Z",
+      "added_from": "brave@minerva",
+      "deleted_at": null,
+      "notes": null
+    },
+    {
+      "id": "01HXYZ8K7M9P3RQ2V5W6Z8B0CA",
+      "url": "https://example.com/deleted-article",
+      "title": "Tombstoned bookmark",
+      "folder": "",
+      "tags": [],
+      "added_at": "2026-04-01T00:00:00Z",
+      "updated_at": "2026-05-10T00:00:00Z",
+      "added_from": "chrome@minerva",
+      "deleted_at": "2026-05-10T00:00:00Z",
+      "notes": null
+    }
+  ]
+}

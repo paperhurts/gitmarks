@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "tags": {
+    "daily": { "color": "#00FFFF", "description": "Open every morning" },
+    "to-read": { "color": "#FFFF00", "description": "Queue" },
+    "reference": { "color": "#00FF88", "description": "Docs and references" },
+    "claudepi": { "color": "#FF00FF", "description": "ClaudePi research" }
+  }
+}
