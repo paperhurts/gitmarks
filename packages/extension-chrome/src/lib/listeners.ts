@@ -15,6 +15,7 @@ import { isSuppressed } from "./suppression.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const DEBOUNCE_MS = 500;
+const MAX_BACKOFF_MS = 60_000;
 const LAST_ERROR_KEY = "gitmarks:lastError";
 
 type Pending =
@@ -35,6 +36,7 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let deps: ListenerDeps | null = null;
 let flushing = false;
 let pendingReschedule = false;
+let consecutiveFailures = 0;
 
 export function __resetForTest(): void {
   pending = [];
@@ -45,6 +47,7 @@ export function __resetForTest(): void {
   deps = null;
   flushing = false;
   pendingReschedule = false;
+  consecutiveFailures = 0;
 }
 
 export function registerListeners(d: ListenerDeps): void {
@@ -61,18 +64,27 @@ function schedule(): void {
     pendingReschedule = true;
     return;
   }
+  const delay = consecutiveFailures === 0
+    ? DEBOUNCE_MS
+    : Math.min(DEBOUNCE_MS * 2 ** consecutiveFailures, MAX_BACKOFF_MS);
   timer = setTimeout(() => {
     timer = null;
     void runFlush();
-  }, DEBOUNCE_MS);
+  }, delay);
 }
 
 async function runFlush(): Promise<void> {
   flushing = true;
   try {
     await flushPending();
+    consecutiveFailures = 0;
+    await chrome.storage.local.remove(LAST_ERROR_KEY);
   } catch (err) {
-    console.error("[gitmarks] flushPending failed; pending edits remain queued", err);
+    consecutiveFailures += 1;
+    console.error(
+      `[gitmarks] flushPending failed (attempt ${consecutiveFailures}); pending edits remain queued`,
+      err,
+    );
     await chrome.storage.local.set({
       [LAST_ERROR_KEY]: {
         when: Date.now(),
