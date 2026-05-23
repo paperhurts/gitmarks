@@ -115,7 +115,7 @@ function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo):
 }
 
 function onMoved(_id: string, _moveInfo: chrome.bookmarks.BookmarkMoveInfo): void {
-  // Folder updates via onMoved are deferred to v1.5 — next reconcile catches drift.
+  // Folder moves are intentionally not pushed from the listener; the periodic reconcile catches folder drift.
 }
 
 function onRemoved(id: string, removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
@@ -148,7 +148,9 @@ export async function flushPending(): Promise<void> {
 
   const client = await deps.getClient();
 
-  // Pre-assign ULIDs for creates so the mutate fn is pure (idempotent on retry).
+  // Pre-assign ULIDs for creates so the mutate fn passed to updateBookmarksOrBootstrap
+  // stays pure across its bootstrap + 409 retries (otherwise newUlid() would mint
+  // a different ULID on each invocation).
   const createUlids = new Map<string, string>();
   for (const event of surviving) {
     if (event.kind === "create" && idMap.ulidForNode(asNodeId(event.nodeId)) == null) {
@@ -198,8 +200,8 @@ function applyBatch(
   let file = initial;
   for (const event of batch) {
     if (event.kind === "create") {
-      // createUlids only contains entries for nodes that were unmapped at flush
-      // time — nodes already in idMap were excluded during pre-computation.
+      // Skip if already mapped — a previous batch already created the remote entry;
+      // treat duplicate create events as no-ops.
       const id = createUlids.get(event.nodeId);
       if (id == null) continue;
       const bm: Bookmark = {
