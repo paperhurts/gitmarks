@@ -23,10 +23,21 @@ export async function applyRemoteChanges(
         suppress(bm.url);
         try {
           await chrome.bookmarks.remove(existingNode);
-        } catch {
-          // Node may already be gone; ignore.
+          removeUlidMapping(idMap, bm.id);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("Can't find bookmark") || msg.includes("not found")) {
+            // Local node already gone — safe to clear the mapping too.
+            removeUlidMapping(idMap, bm.id);
+          } else {
+            // Real failure (managed bookmarks, permissions, etc.) — keep the mapping
+            // and re-throw so the caller knows the apply was partial.
+            console.error("[gitmarks] failed to apply remote delete", {
+              ulid: bm.id, nodeId: existingNode, err,
+            });
+            throw err;
+          }
         }
-        removeUlidMapping(idMap, bm.id);
       }
       continue;
     }

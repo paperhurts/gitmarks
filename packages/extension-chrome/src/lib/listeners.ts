@@ -21,6 +21,7 @@ import { isSuppressed } from "./suppression.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const DEBOUNCE_MS = 500;
+const LAST_ERROR_KEY = "gitmarks:lastError";
 
 type Pending =
   | { kind: "create"; nodeId: string; url: string; title: string }
@@ -59,7 +60,16 @@ function schedule(): void {
   if (timer != null) return;
   timer = setTimeout(() => {
     timer = null;
-    void flushPending();
+    flushPending().catch(async (err) => {
+      console.error("[gitmarks] flushPending failed; pending edits remain queued", err);
+      await chrome.storage.local.set({
+        [LAST_ERROR_KEY]: {
+          when: Date.now(),
+          message: err instanceof Error ? err.message : String(err),
+          source: "flush",
+        },
+      });
+    });
   }, DEBOUNCE_MS);
 }
 
@@ -98,8 +108,7 @@ export async function flushPending(): Promise<void> {
   if (deps == null) throw new Error("listeners not registered");
   if (pending.length === 0) return;
 
-  const batch = pending;
-  pending = [];
+  const batch = pending.slice();  // snapshot, but don't clear yet
 
   const idMap = await deps.getIdMap();
   const machineId = await deps.getMachineId();
@@ -110,7 +119,10 @@ export async function flushPending(): Promise<void> {
     if (p.kind === "update" && p.url != null) return !isSuppressed(p.url);
     return true;
   });
-  if (surviving.length === 0) return;
+  if (surviving.length === 0) {
+    pending = [];  // suppression dropped everything; safe to clear
+    return;
+  }
 
   const client = await deps.getClient();
 
@@ -138,15 +150,17 @@ export async function flushPending(): Promise<void> {
     nowIso,
   );
 
-  // Apply id-map side effects once, after the write succeeded.
+  // Only after the update succeeds: apply id-map side effects and clear pending.
   for (const { ulid, nodeId } of toAdd) {
     setMapping(idMap, ulid, nodeId);
   }
   for (const nodeId of toRemove) {
     removeNodeMapping(idMap, nodeId);
   }
-
   await saveIdMap(idMap);
+  // Remove only the events we actually processed; new events arrived during
+  // the await are preserved.
+  pending = pending.slice(batch.length);
 }
 
 function applyBatch(

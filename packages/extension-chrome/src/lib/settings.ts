@@ -11,12 +11,27 @@ export const settingsSchema = z.object({
 
 export type Settings = z.infer<typeof settingsSchema>;
 
+export class SettingsCorruptError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SettingsCorruptError";
+  }
+}
+
 export async function loadSettings(): Promise<Settings | null> {
   const result = await chrome.storage.local.get(SETTINGS_KEY);
   const raw = result[SETTINGS_KEY];
   if (raw == null) return null;
   const parsed = settingsSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) {
+    console.error("[gitmarks] stored settings failed validation", {
+      issues: parsed.error.issues,
+    });
+    throw new SettingsCorruptError(
+      "Stored settings are invalid — please reconfigure.",
+    );
+  }
+  return parsed.data;
 }
 
 export async function saveSettings(value: Settings): Promise<void> {

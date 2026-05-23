@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadSettings, saveSettings, clearSettings } from "../src/lib/settings.js";
+import { loadSettings, saveSettings, clearSettings, SettingsCorruptError } from "../src/lib/settings.js";
 
 describe("settings", () => {
   it("returns null when nothing is stored", async () => {
@@ -17,9 +17,9 @@ describe("settings", () => {
     expect(await loadSettings()).toEqual(s);
   });
 
-  it("returns null when the stored value is malformed", async () => {
+  it("throws SettingsCorruptError when the stored value is malformed", async () => {
     await chrome.storage.local.set({ "gitmarks:settings": { not: "valid" } });
-    expect(await loadSettings()).toBeNull();
+    await expect(loadSettings()).rejects.toThrow(/invalid/);
   });
 
   it("clearSettings removes the stored value", async () => {
