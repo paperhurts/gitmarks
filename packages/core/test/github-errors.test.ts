@@ -31,6 +31,12 @@ describe("GitHub errors", () => {
     expect(e.name).toBe("GitHubConflictError");
   });
 
+  it("GitHubConflictError accepts a status override (e.g. 422)", () => {
+    const e = new GitHubConflictError("bookmarks.json", 422);
+    expect(e.status).toBe(422);
+    expect(e.path).toBe("bookmarks.json");
+  });
+
   it("GitHubNotFoundError carries the path and status 404", () => {
     const e = new GitHubNotFoundError("tags.json");
     expect(e).toBeInstanceOf(GitHubError);
