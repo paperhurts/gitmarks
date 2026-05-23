@@ -8,12 +8,6 @@ import {
 } from "@gitmarks/core";
 import { saveBookmark } from "../src/lib/save-flow.js";
 
-const settings = {
-  token: "t",
-  owner: "alice",
-  repo: "marks",
-  branch: "main",
-};
 const machineId = "ABCDE12F";
 const nowIso = "2026-05-23T14:32:11Z";
 const page = { url: "https://example.com/", title: "Example" };
@@ -35,7 +29,7 @@ describe("saveBookmark", () => {
     }) as any;
     const client = fakeClient({ update });
 
-    const result = await saveBookmark(client, settings, page, machineId, nowIso);
+    const result = await saveBookmark(client, page, machineId, nowIso);
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("unreachable");
@@ -64,7 +58,7 @@ describe("saveBookmark", () => {
     const write = vi.fn(async () => ({ sha: "s1", etag: '"e1"' })) as any;
     const client = fakeClient({ update, write });
 
-    const result = await saveBookmark(client, settings, page, machineId, nowIso);
+    const result = await saveBookmark(client, page, machineId, nowIso);
 
     expect(result.ok).toBe(true);
     expect(write).toHaveBeenCalledTimes(1);
@@ -82,7 +76,7 @@ describe("saveBookmark", () => {
     });
     const client = fakeClient({ update });
 
-    const result = await saveBookmark(client, settings, page, machineId, nowIso);
+    const result = await saveBookmark(client, page, machineId, nowIso);
 
     expect(result).toEqual({
       ok: false,
@@ -97,7 +91,7 @@ describe("saveBookmark", () => {
     });
     const client = fakeClient({ update });
 
-    const result = await saveBookmark(client, settings, page, machineId, nowIso);
+    const result = await saveBookmark(client, page, machineId, nowIso);
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("unreachable");
