@@ -136,13 +136,6 @@ The load-bearing invariants:
 
 ## Contributing
 
-The codebase is plan-driven — each merged branch corresponds to a plan in
-`docs/superpowers/plans/` that decomposes the work into ~10 task-sized
-commits with TDD. New work follows the same shape:
-
-1. Read `spec.md` for the relevant section
-2. Write a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
-3. Execute task-by-task on a feature branch with passing tests at every step
-4. Final review + merge
-
-See existing plans for the template.
+See `CONTRIBUTING.md` for the branch/PR conventions, conventional-commit
+scopes, and the plan-driven workflow used for larger features. Every
+change goes through a PR with green CI — no direct commits to `main`.
