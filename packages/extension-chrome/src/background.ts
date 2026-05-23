@@ -1,38 +1,113 @@
-import { GitHubClient } from "@gitmarks/core";
-import { loadSettings } from "./lib/settings.js";
+import {
+  GitHubClient,
+  GitHubNotFoundError,
+  type BookmarksFile,
+} from "@gitmarks/core";
+import { loadSettings, type Settings } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
-import { saveBookmark, type PageInfo, type SaveResult } from "./lib/save-flow.js";
+import { loadIdMap } from "./lib/id-mapping.js";
+import { reconcile } from "./lib/reconcile.js";
+import { registerListeners } from "./lib/listeners.js";
+import { applyRemoteChanges } from "./lib/apply-remote.js";
 
-interface SaveCurrentPageMessage {
-  type: "save-current-page";
-  page: PageInfo;
+const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
+const POLL_ALARM_NAME = "gitmarks:poll";
+const RECONCILED_AT_KEY = "gitmarks:lastReconciledAt";
+const LAST_ETAG_KEY = "gitmarks:bookmarksEtag";
+
+let cachedBarId: string | null = null;
+let cachedOtherId: string | null = null;
+
+async function getBarOtherIds(): Promise<{ bar: string; other: string }> {
+  if (cachedBarId != null && cachedOtherId != null) {
+    return { bar: cachedBarId, other: cachedOtherId };
+  }
+  const tree = await chrome.bookmarks.getTree();
+  const root = tree[0];
+  if (root?.children == null || root.children.length < 2) {
+    throw new Error("unexpected chrome.bookmarks tree shape");
+  }
+  cachedBarId = root.children[0]!.id;
+  cachedOtherId = root.children[1]!.id;
+  return { bar: cachedBarId, other: cachedOtherId };
 }
 
-type IncomingMessage = SaveCurrentPageMessage;
-
-chrome.runtime.onMessage.addListener(
-  (msg: IncomingMessage, _sender, sendResponse) => {
-    if (msg?.type !== "save-current-page") return false;
-    void handleSavePage(msg.page).then(sendResponse);
-    return true; // keep the message channel open for async sendResponse
-  },
-);
-
-async function handleSavePage(page: PageInfo): Promise<SaveResult> {
-  const settings = await loadSettings();
-  if (settings == null) {
-    return {
-      ok: false,
-      kind: "not_configured",
-      message: "gitmarks is not configured. Open Options to set up.",
-    };
-  }
-  const machineId = await getMachineId();
-  const client = new GitHubClient({
+function buildClient(settings: Settings): GitHubClient {
+  return new GitHubClient({
     owner: settings.owner,
     repo: settings.repo,
     token: settings.token,
     branch: settings.branch,
   });
-  return saveBookmark(client, page, machineId, new Date().toISOString());
 }
+
+async function maybeReconcile(): Promise<void> {
+  const settings = await loadSettings();
+  if (settings == null) return;
+
+  const stored = await chrome.storage.local.get(RECONCILED_AT_KEY);
+  const last = typeof stored[RECONCILED_AT_KEY] === "number"
+    ? (stored[RECONCILED_AT_KEY] as number)
+    : 0;
+  if (Date.now() - last < RECONCILE_INTERVAL_MS) return;
+
+  const { bar, other } = await getBarOtherIds();
+  const client = buildClient(settings);
+  const idMap = await loadIdMap();
+  const machineId = await getMachineId();
+  const nowIso = new Date().toISOString();
+
+  try {
+    await reconcile(client, idMap, bar, other, machineId, nowIso);
+    await chrome.storage.local.set({ [RECONCILED_AT_KEY]: Date.now() });
+  } catch (err) {
+    console.warn("[gitmarks] reconcile failed", err);
+  }
+}
+
+async function pollRemoteOnce(): Promise<void> {
+  const settings = await loadSettings();
+  if (settings == null) return;
+  const client = buildClient(settings);
+  const stored = await chrome.storage.local.get(LAST_ETAG_KEY);
+  const etag = typeof stored[LAST_ETAG_KEY] === "string"
+    ? (stored[LAST_ETAG_KEY] as string)
+    : null;
+
+  try {
+    const result = etag
+      ? await client.readIfChanged<BookmarksFile>("bookmarks.json", etag)
+      : await client.read<BookmarksFile>("bookmarks.json");
+    if (result == null) return;
+    const { bar, other } = await getBarOtherIds();
+    const idMap = await loadIdMap();
+    await applyRemoteChanges(result.data, idMap, bar, other);
+    await chrome.storage.local.set({ [LAST_ETAG_KEY]: result.etag });
+  } catch (err) {
+    if (err instanceof GitHubNotFoundError) return;
+    console.warn("[gitmarks] poll failed", err);
+  }
+}
+
+// Listeners
+registerListeners({
+  getClient: async () => {
+    const s = await loadSettings();
+    if (s == null) throw new Error("no settings");
+    return buildClient(s);
+  },
+  getIdMap: async () => loadIdMap(),
+  getBarOtherIds,
+  getMachineId,
+});
+
+// Periodic poll
+chrome.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 5 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === POLL_ALARM_NAME) {
+    void pollRemoteOnce();
+  }
+});
+
+// Initial reconcile if needed
+void maybeReconcile();
