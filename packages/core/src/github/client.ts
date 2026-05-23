@@ -1,9 +1,10 @@
 import {
   GitHubAuthError,
+  GitHubConflictError,
   GitHubError,
   GitHubNotFoundError,
 } from "./errors.js";
-import { decodeBase64Utf8 } from "./base64.js";
+import { decodeBase64Utf8, encodeBase64Utf8 } from "./base64.js";
 
 export interface GitHubClientOptions {
   owner: string;
@@ -109,6 +110,41 @@ export class GitHubClient {
     return {
       data,
       sha: body.sha,
+      etag: res.headers.get("etag") ?? "",
+    };
+  }
+
+  async write<T>(
+    path: string,
+    data: T,
+    message: string,
+    opts: { prevSha?: string } = {},
+  ): Promise<{ sha: string; etag: string }> {
+    const content = encodeBase64Utf8(JSON.stringify(data, null, 2));
+    const body: Record<string, unknown> = {
+      message,
+      content,
+      branch: this.branch,
+    };
+    if (opts.prevSha) body.sha = opts.prevSha;
+
+    const res = await this.fetchImpl(this.contentsUrl(path), {
+      method: "PUT",
+      headers: this.headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 409 || res.status === 422) {
+      throw new GitHubConflictError(path, res.status);
+    }
+    if (res.status === 401) throw new GitHubAuthError();
+    if (!res.ok) {
+      throw new GitHubError(`GitHub ${res.status} on PUT ${path}`, res.status);
+    }
+
+    const respBody = (await res.json()) as { content: { sha: string } };
+    return {
+      sha: respBody.content.sha,
       etag: res.headers.get("etag") ?? "",
     };
   }
