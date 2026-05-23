@@ -106,7 +106,6 @@ async function pollRemoteOnce(): Promise<void> {
   }
 }
 
-// Listeners
 registerListeners({
   getClient: async () => {
     const s = await loadSettings();
@@ -118,7 +117,6 @@ registerListeners({
   getMachineId,
 });
 
-// Periodic poll
 chrome.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POLL_ALARM_NAME) {
@@ -126,5 +124,4 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Initial reconcile if needed
 void maybeReconcile();

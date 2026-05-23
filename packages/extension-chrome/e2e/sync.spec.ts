@@ -14,7 +14,7 @@
  * background.ts's registered listeners. During development we couldn't get
  * events fired from serviceWorker.evaluate() to reach the module's listeners
  * within the test timeout — likely a combination of SW eviction timing and
- * the 500ms debounce window. The root cause wasn't fully isolated; a future
+ * the listener's debounce window. The root cause wasn't fully isolated; a future
  * investigation could revisit this. Until then, the production listener →
  * debounce → flush chain is covered by the unit tests in
  * test/listeners.test.ts, and the live wiring is verified by the manual
@@ -202,7 +202,6 @@ test.describe("native tree sync", () => {
     const mock = await installGitHubMock(context, serviceWorker);
     await configureExtension(context, extensionId);
 
-    // Create the bookmark in the local tree (mirrors what a user action does)
     await serviceWorker.evaluate(async () => {
       const tree = await chrome.bookmarks.getTree();
       const bar = tree[0]!.children![0]!;
@@ -214,14 +213,14 @@ test.describe("native tree sync", () => {
     });
 
     // Push the bookmark to GitHub (equivalent to flushPending firing after the
-    // 500ms debounce; runs in evaluate context where fetch IS mocked)
+    // listener's debounce window; runs in evaluate context where fetch IS mocked)
     const pushResult = await pushBookmarkToGitHub(serviceWorker, {
       url: "https://e2e.example/inserted",
       title: "Inserted via e2e",
     });
     expect(pushResult.ok).toBe(true);
 
-    // The PUT was handled by the SW-level mock — pull its state back
+    // Sync mock state across the SW/page boundary
     await mock.syncFromSW();
 
     const stored = decodeStoredBookmarks(mock.state) as {
@@ -232,7 +231,6 @@ test.describe("native tree sync", () => {
     expect(ours).toBeDefined();
     expect(ours!.title).toBe("Inserted via e2e");
 
-    // Clean up
     await serviceWorker.evaluate(async (title) => {
       const tree = await chrome.bookmarks.getTree();
       const bar = tree[0]!.children![0]!;
@@ -285,7 +283,6 @@ test.describe("native tree sync", () => {
       shaCounter: mock.state.shaCounter,
     });
 
-    // Apply remote changes to local tree (equivalent to pollRemoteOnce())
     const created = await applyRemoteToLocal(serviceWorker);
     expect(created).toContain("https://e2e.example/from-remote");
 
@@ -297,7 +294,6 @@ test.describe("native tree sync", () => {
     }, "https://e2e.example/from-remote");
     expect(found).toBe(true);
 
-    // Cleanup
     await serviceWorker.evaluate(async (url) => {
       const tree = await chrome.bookmarks.getTree();
       const bar = tree[0]!.children![0]!;
