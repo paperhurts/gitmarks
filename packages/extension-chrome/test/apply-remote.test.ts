@@ -99,6 +99,25 @@ describe("applyRemoteChanges", () => {
     expect(bmCreate[0].parentId).toBe("ai-id");
   });
 
+  it("saves the id map even when a later chrome.bookmarks.create throws", async () => {
+    const bm1 = bookmark({ id: "u1", url: "https://example.com/ok" });
+    const bm2 = bookmark({ id: "u2", url: "https://example.com/fail" });
+    const idMap = await IdMap.load();
+
+    // First create succeeds, second throws.
+    (chrome.bookmarks.create as any)
+      .mockResolvedValueOnce({ id: "node-1", url: bm1.url, title: bm1.title })
+      .mockRejectedValueOnce(new Error("boom"));
+
+    await expect(
+      applyRemoteChanges(file([bm1, bm2]), idMap, BAR, OTHER),
+    ).rejects.toThrow("boom");
+
+    // The first mapping should still be persisted to storage.
+    const reloaded = await IdMap.load();
+    expect(reloaded.nodeForUlid(asUlid("u1"))).toBe("node-1");
+  });
+
   it("reuses an existing subfolder when its title matches", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/reuse", folder: "Reading" });
     const idMap = await IdMap.load();
