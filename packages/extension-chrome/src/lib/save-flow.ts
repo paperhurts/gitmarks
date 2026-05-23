@@ -49,6 +49,7 @@ export async function saveBookmark(
     );
     return { ok: true, bookmark };
   } catch (err) {
+    console.error("[gitmarks] saveBookmark failed", err);
     return classify(err);
   }
 }
@@ -67,5 +68,8 @@ function classify(err: unknown): SaveResult {
     return { ok: false, kind: "unknown", message: err.message };
   }
   const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
+    return { ok: false, kind: "unknown", message: "Network error — check your connection and try again." };
+  }
   return { ok: false, kind: "unknown", message };
 }

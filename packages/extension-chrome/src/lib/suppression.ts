@@ -1,3 +1,6 @@
+// 2s = 4× the 500ms listener debounce; long enough to swallow our own echo from
+// apply-remote.create→onCreated, short enough that a fresh user edit on the
+// same URL is still pushed.
 const SUPPRESSION_TTL_MS = 2000;
 
 const registry = new Map<string, number>();
