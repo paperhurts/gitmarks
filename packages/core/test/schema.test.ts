@@ -55,6 +55,21 @@ describe("bookmarkSchema", () => {
       bookmarkSchema.parse({ ...validBookmark, folder: "" }),
     ).not.toThrow();
   });
+
+  it("rejects a bookmark with a lowercase ULID", () => {
+    expect(() =>
+      bookmarkSchema.parse({
+        ...validBookmark,
+        id: "01hxyz8k7m9p3rq2v5w6z8b0c1",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects an added_from without @", () => {
+    expect(() =>
+      bookmarkSchema.parse({ ...validBookmark, added_from: "nodomain" }),
+    ).toThrow();
+  });
 });
 
 describe("bookmarksFileSchema", () => {

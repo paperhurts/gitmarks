@@ -10,7 +10,7 @@ export const bookmarkSchema = z.object({
   tags: z.array(z.string()),
   added_at: z.string().datetime({ offset: true }),
   updated_at: z.string().datetime({ offset: true }),
-  added_from: z.string().regex(/^[^@]+@[^@]+$/, "must be <browser>@<machine>"),
+  added_from: z.string().regex(/^[^\s@]+@[^\s@]+$/, "must be <browser>@<machine>"),
   deleted_at: z.string().datetime({ offset: true }).nullable(),
   notes: z.string().nullable(),
 });
