@@ -149,8 +149,17 @@ export async function flushPending(): Promise<void> {
 
   const surviving = batch.filter((p) => {
     if (p.kind === "create") return !isSuppressed(p.url);
-    if (p.kind === "update" && p.url != null) return !isSuppressed(p.url);
-    if (p.kind === "remove") return !isSuppressed(p.url);
+    // Updates and removes against an unmapped node would no-op inside the
+    // mutate fn; skip them now so we don't invoke client.update with nothing
+    // to do (issue #8).
+    if (p.kind === "update") {
+      if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      return p.url == null || !isSuppressed(p.url);
+    }
+    if (p.kind === "remove") {
+      if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      return !isSuppressed(p.url);
+    }
     return true;
   });
   if (surviving.length === 0) {
