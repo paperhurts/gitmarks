@@ -130,11 +130,14 @@ The load-bearing invariants:
 ## Files in this repo
 
 - `spec.md` — full design spec (source of truth for non-obvious decisions)
+- `CONTRIBUTING.md` — branch/PR conventions, TDD policy, plan-driven workflow
 - `CLAUDE.md` — guidance for AI agents working in this repo
+- `LICENSE` — MIT
 - `docs/superpowers/plans/` — implementation plans, one per branch
 - `packages/*/README.md` — package-specific documentation
 - `examples/example-bookmarks-repo/` — sample `bookmarks.json` + `tags.json`
   to seed a fresh repo, used by `@gitmarks/core` fixture tests
+- `.github/workflows/test.yml` — CI (typecheck + unit tests + build on every PR)
 
 ## Contributing
 
