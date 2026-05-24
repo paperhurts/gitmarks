@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project status
 
 Two packages are merged to main and working:
-- `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers, pure mutation helpers, example fixtures. 59 unit tests.
-- `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — MV3 Chrome extension with toolbar save, two-way native-tree sync, 5-min poll, initial reconciliation. 53 unit tests + 6 Playwright e2e tests.
+- `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers, example fixtures. 65 unit tests.
+- `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — MV3 Chrome extension with toolbar save, two-way native-tree sync, 5-min poll, initial reconciliation, opt-in tracking-param stripping settings flag. 97 unit tests + 4 Playwright e2e tests (2 e2e skipped pending Playwright limitation fixes — see issue history).
 
 Pending packages (in dependency order): Firefox build, web UI (read + search + tags), web UI (write + bulk ops), Safari.
 
@@ -35,7 +35,7 @@ These are spec-level constraints; don't violate without an explicit discussion:
 Pure TypeScript ESM library. No browser APIs, no React. Three layers:
 
 - **Schemas** (`src/schema/`): Zod schemas for `bookmarks.json` and `tags.json`. Inferred types (`Bookmark`, `BookmarksFile`, `Tag`, `TagsFile`).
-- **Primitives** (`src/url.ts`, `src/ulid.ts`): URL normalization (strip trailing slash, drop non-hashbang fragments) and ULID generation. Wrappers so call sites depend on `@gitmarks/core` not `ulid` directly.
+- **Primitives** (`src/url.ts`, `src/ulid.ts`): URL normalization (strip trailing slash, drop non-hashbang fragments, optionally strip utm_*/fbclid/gclid/msclkid/mc_* tracking params via `{ stripTrackingParams: true }`) and ULID generation. Wrappers so call sites depend on `@gitmarks/core` not `ulid` directly.
 - **Mutations** (`src/mutate.ts`): pure functions — `addBookmark`, `updateBookmark`, `softDeleteBookmark`, `gcTombstones`. Each takes a `BookmarksFile` and `nowIso`, returns a new file. **Purity is load-bearing** — `GitHubClient.update()` replays these on conflict, so they must not close over external state.
 - **GitHub client** (`src/github/client.ts`): `GitHubClient` class with `read`, `readIfChanged` (ETag-conditional), `write` (create or update), `update` (read → mutate → write with 409/422 replay). DI fetch in the constructor for testability — no `msw` needed.
 

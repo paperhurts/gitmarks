@@ -24,7 +24,8 @@ the roadmap. See `spec.md` for the full design.
   on the next 5-minute poll
 - Concurrent edits from multiple devices reconcile automatically via
   GitHub's file SHA + optimistic retry-replay
-- 112 automated tests (unit + Playwright e2e against real Chromium)
+- 162 automated tests (unit + Playwright e2e against real Chromium)
+- Optional **tracking-param stripping** (utm_*, fbclid, gclid, etc.) at save time — opt-in via settings
 
 ## Packages
 
@@ -120,10 +121,11 @@ The load-bearing invariants:
 - ✅ `@gitmarks/core` — schemas, GitHub client, mutations
 - ✅ Chrome MVP — toolbar-button save flow
 - ✅ Chrome native tree integration — listeners, reconcile, poll loop
-- ⬜ Firefox build (`webextension-polyfill`)
-- ⬜ Web UI: list / search / tag management
-- ⬜ Web UI: bulk operations + trash + export
-- ⬜ Safari (via `safari-web-extension-converter`)
+- ✅ Tracking-param stripping (opt-in)
+- ⬜ Firefox build ([#23](https://github.com/paperhurts/gitmarks/issues/23))
+- ⬜ Web UI v1: list + search + tag management ([#24](https://github.com/paperhurts/gitmarks/issues/24))
+- ⬜ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
+- ⬜ Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26))
 
 ## Files in this repo
 
