@@ -241,6 +241,34 @@ describe("listeners", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("onRemoved for an unmapped node skips the GitHub round-trip entirely (issue #18 symmetric to #8)", async () => {
+    const update = vi.fn();
+    const client = fakeClient({ update });
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => IdMap.load(),
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const removeListener = (chrome.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
+    removeListener("never-mapped-node", {
+      parentId: BAR,
+      index: 0,
+      node: {
+        id: "never-mapped-node",
+        parentId: BAR,
+        title: "Stranger",
+        url: "https://stranger.example/",
+      },
+    });
+
+    await flushPending();
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("onChanged for an unmapped node skips the GitHub round-trip entirely", async () => {
     // Issue #8: when onChanged fires for a node with no ULID mapping, the
     // previous behavior called client.update() with a no-op mutate — a wasted
