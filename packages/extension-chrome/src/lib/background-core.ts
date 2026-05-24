@@ -10,6 +10,16 @@ const LAST_ETAG_KEY = "gitmarks:bookmarksEtag";
 const LAST_ERROR_KEY = "gitmarks:lastError";
 const BOOKMARKS_PATH = "bookmarks.json";
 
+declare const etagBrand: unique symbol;
+export type Etag = string & { readonly [etagBrand]: true };
+
+// Narrow a raw stored string into an Etag, rejecting the empty-string case
+// (a representable-but-invalid value that would otherwise take the wrong
+// branch in `etag ? readIfChanged : read`).
+export function toEtag(s: string): Etag | null {
+  return s.length > 0 ? (s as Etag) : null;
+}
+
 export interface ReconcileDeps {
   now: number;
   lastReconciledAt: number;
@@ -39,7 +49,7 @@ export async function runMaybeReconcile(deps: ReconcileDeps): Promise<void> {
 }
 
 export interface PollDeps {
-  etag: string | null;
+  etag: Etag | null;
   now: number;
   client: GitHubClient;
   applyRemote: (data: BookmarksFile) => Promise<void>;
@@ -49,7 +59,7 @@ export interface PollDeps {
 
 export async function runPollRemoteOnce(deps: PollDeps): Promise<void> {
   try {
-    const result = deps.etag
+    const result = deps.etag !== null
       ? await deps.client.readIfChanged<BookmarksFile>(BOOKMARKS_PATH, deps.etag)
       : await deps.client.read<BookmarksFile>(BOOKMARKS_PATH);
     if (result == null) return;
