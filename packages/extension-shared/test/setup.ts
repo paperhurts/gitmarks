@@ -62,6 +62,7 @@ const chromeStub = {
 };
 
 vi.stubGlobal("chrome", chromeStub);
+vi.stubGlobal("browser", chromeStub);
 
 beforeEach(async () => {
   await chromeStub.storage.local.clear();
