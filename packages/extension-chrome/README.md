@@ -1,7 +1,12 @@
 # @gitmarks/extension-chrome
 
-Chrome MV3 extension. Save bookmarks to your own GitHub repo, and keep
-Chrome's native bookmark tree in two-way sync with the JSON file.
+Chrome MV3 extension shell. The bulk of the implementation lives in
+`@gitmarks/extension-shared`; this package owns only the Chrome-specific
+manifest, Vite + `@crxjs/vite-plugin` build configuration, thin entry
+files, and the Playwright e2e suite.
+
+Functionally identical to `@gitmarks/extension-firefox` — both shells
+import the same source.
 
 ## Develop
 
