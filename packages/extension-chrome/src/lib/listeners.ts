@@ -147,20 +147,36 @@ export async function flushPending(): Promise<void> {
   const machineId = await deps.getMachineId();
   const nowIso = new Date().toISOString();
 
+  // A node that has a create event in this same batch should accept
+  // subsequent update/remove events for it, even though it isn't in the
+  // id map yet — the create will mint a ULID inside applyBatch and the
+  // update/remove can chain through createUlids (issue #19).
+  const createdNodeIds = new Set<string>();
+  for (const p of batch) {
+    if (p.kind === "create") createdNodeIds.add(p.nodeId);
+  }
+
   const surviving = batch.filter((p) => {
     if (p.kind === "create") return !isSuppressed(p.url);
     // Updates and removes against an unmapped node would no-op inside the
     // mutate fn; skip them now so we don't invoke client.update with nothing
-    // to do (issue #8).
+    // to do (issue #8). Exception: a node being created in this same batch
+    // is "about to be mapped" — accept it.
     if (p.kind === "update") {
-      if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      const mappedOrCreating =
+        idMap.ulidForNode(asNodeId(p.nodeId)) != null ||
+        createdNodeIds.has(p.nodeId);
+      if (!mappedOrCreating) return false;
       // NodeId-suppression catches title-only echoes from apply-remote.update
       // (changeInfo.url is undefined for title-only changes — issue #18 A).
       if (isNodeSuppressed(p.nodeId)) return false;
       return p.url == null || !isSuppressed(p.url);
     }
     if (p.kind === "remove") {
-      if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      const mappedOrCreating =
+        idMap.ulidForNode(asNodeId(p.nodeId)) != null ||
+        createdNodeIds.has(p.nodeId);
+      if (!mappedOrCreating) return false;
       if (isNodeSuppressed(p.nodeId)) return false;
       return !isSuppressed(p.url);
     }
@@ -244,7 +260,11 @@ function applyBatch(
       file = addBookmark(file, bm, nowIso);
       toAdd.push({ ulid: id, nodeId: event.nodeId });
     } else if (event.kind === "update") {
-      const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
+      // Consult createUlids for nodes being created in this same batch (the
+      // id-map mutation is deferred until after a successful write, so it's
+      // not visible here yet — issue #19).
+      const ulid =
+        idMap.ulidForNode(asNodeId(event.nodeId)) ?? createUlids.get(event.nodeId);
       if (ulid == null) continue;
       const existing = file.bookmarks.find((b) => b.id === ulid);
       if (existing == null) continue;
@@ -259,7 +279,8 @@ function applyBatch(
       if (Object.keys(patch).length === 0) continue;
       file = updateBookmark(file, ulid, patch, nowIso);
     } else if (event.kind === "remove") {
-      const ulid = idMap.ulidForNode(asNodeId(event.nodeId));
+      const ulid =
+        idMap.ulidForNode(asNodeId(event.nodeId)) ?? createUlids.get(event.nodeId);
       if (ulid == null) continue;
       file = softDeleteBookmark(file, ulid, nowIso);
       toRemove.push(event.nodeId);
