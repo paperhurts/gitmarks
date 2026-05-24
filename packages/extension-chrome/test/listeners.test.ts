@@ -214,13 +214,12 @@ describe("listeners", () => {
     expect(captured!.bookmarks[0]!.title).toBe("New title");
   });
 
-  it("onChanged for an unmapped node produces no bookmark changes (no-op mutate)", async () => {
-    let captured: BookmarksFile | null = null;
-    const initial: BookmarksFile = { version: 1, updated_at: "x", bookmarks: [] };
-    const update = vi.fn(async (_p: string, mutate: any) => {
-      captured = mutate(initial);
-      return { data: captured, sha: "s", etag: "" };
-    });
+  it("onChanged for an unmapped node skips the GitHub round-trip entirely", async () => {
+    // Issue #8: when onChanged fires for a node with no ULID mapping, the
+    // previous behavior called client.update() with a no-op mutate — a wasted
+    // network round-trip. The fix: filter unmapped update/remove events out
+    // of the surviving batch before invoking the client.
+    const update = vi.fn();
     const client = fakeClient({ update });
 
     registerListeners({
@@ -235,10 +234,7 @@ describe("listeners", () => {
 
     await flushPending();
 
-    // update is called (the event is in surviving), but the mutate is a pure no-op:
-    // no bookmark is added/modified because the node has no ULID mapping.
-    expect(captured).not.toBeNull();
-    expect(captured!.bookmarks.length).toBe(0);
+    expect(update).not.toHaveBeenCalled();
   });
 
   // I5: onRemoved dispatch
