@@ -25,17 +25,25 @@ export type SaveResult =
       message: string;
     };
 
+export interface SaveOptions {
+  stripTrackingParams?: boolean;
+}
+
 export async function saveBookmark(
   client: GitHubClient,
   page: PageInfo,
   machineId: string,
   nowIso: string,
+  opts: SaveOptions = {},
 ): Promise<SaveResult> {
   const bookmark = buildBookmark({
     url: page.url,
     title: page.title,
     machineId,
     nowIso,
+    ...(opts.stripTrackingParams !== undefined
+      ? { stripTrackingParams: opts.stripTrackingParams }
+      : {}),
   });
   const commitMsg = `add bookmark from chrome@${machineId}`;
 

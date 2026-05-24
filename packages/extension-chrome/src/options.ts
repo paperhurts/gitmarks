@@ -16,6 +16,7 @@ const tokenInput = $<HTMLInputElement>("token");
 const ownerInput = $<HTMLInputElement>("owner");
 const repoInput = $<HTMLInputElement>("repo");
 const branchInput = $<HTMLInputElement>("branch");
+const stripTrackingParamsInput = $<HTMLInputElement>("stripTrackingParams");
 const validateBtn = $<HTMLButtonElement>("validate");
 const saveBtn = $<HTMLButtonElement>("save");
 const status = $<HTMLParagraphElement>("status");
@@ -26,6 +27,7 @@ function readForm(): Settings {
     owner: ownerInput.value.trim(),
     repo: repoInput.value.trim(),
     branch: branchInput.value.trim() || "main",
+    stripTrackingParams: stripTrackingParamsInput.checked,
   };
 }
 
@@ -55,6 +57,7 @@ async function loadIntoForm(): Promise<void> {
   ownerInput.value = s.owner;
   repoInput.value = s.repo;
   branchInput.value = s.branch;
+  stripTrackingParamsInput.checked = s.stripTrackingParams;
 }
 
 validateBtn.addEventListener("click", async () => {

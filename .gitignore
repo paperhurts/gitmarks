@@ -6,3 +6,5 @@ dist/
 .idea/
 coverage/
 .turbo/
+test-results/
+playwright-report/
