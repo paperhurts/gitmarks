@@ -30,6 +30,9 @@ importers:
       '@gitmarks/core':
         specifier: workspace:*
         version: link:../core
+      '@gitmarks/extension-shared':
+        specifier: workspace:*
+        version: link:../extension-shared
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -43,15 +46,9 @@ importers:
       '@types/chrome':
         specifier: ^0.0.268
         version: 0.0.268
-      jsdom:
-        specifier: ^25.0.0
-        version: 25.0.1
       vite:
         specifier: ^5.4.0
         version: 5.4.21
-      vitest:
-        specifier: ^2.0.0
-        version: 2.1.9(jsdom@25.0.1)
 
   packages/extension-shared:
     dependencies:
