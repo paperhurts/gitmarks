@@ -85,8 +85,10 @@ describe("applyRemoteChanges", () => {
     expect(chrome.bookmarks.update).toHaveBeenCalledWith("node-1", {
       url: "https://example.com/new-path",
     });
-    // Suppress both old and new URL — the onChanged echo will fire with the new URL
+    // Suppress BOTH the new URL (carried in the onChanged echo) AND the old
+    // URL (in case a racing user edit on the old path is in flight).
     expect(isSuppressed("https://example.com/new-path")).toBe(true);
+    expect(isSuppressed("https://example.com/old-path")).toBe(true);
   });
 
   it("silently skips a mapped-but-locally-deleted node (chrome.bookmarks.get throws 'not found')", async () => {
