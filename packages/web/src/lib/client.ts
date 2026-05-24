@@ -27,8 +27,10 @@ export async function validateConnection(
     await client.read("bookmarks.json");
     try {
       await client.read("tags.json");
-    } catch {
-      // tags.json missing is fine for v1; treat as ok-with-files since bookmarks loaded.
+    } catch (err) {
+      // tags.json missing is fine — bookmarks.json already validated auth + repo.
+      // Other errors (auth flip, network) should still surface via the outer catch.
+      if (!(err instanceof GitHubNotFoundError)) throw err;
     }
     return { status: "ok-with-files" };
   } catch (err) {
