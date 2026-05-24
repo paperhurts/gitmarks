@@ -168,19 +168,23 @@ pnpm --filter @gitmarks/extension-chrome typecheck
 
 **Coverage:**
 
-Unit tests (53) cover the pure logic — settings, machine ID, bookmark
+Unit tests (97) cover the pure logic — settings, machine ID, bookmark
 factory, save flow, folder path conversion, ID mapping, suppression
-registry, apply-remote, reconciliation, and the listener
-batch/debounce/flush algorithm. Tests use a vitest setup file that stubs
+registry (URL + node ID), apply-remote, reconciliation, the listener
+batch/debounce/flush algorithm, and the background-core poll/reconcile
+orchestration. Tests use a vitest setup file that stubs
 `chrome.storage.local` and `chrome.bookmarks.*` with an in-memory backend.
 
-E2e tests (6) launch real Chromium with the built extension, mock the
-GitHub API via Playwright route interception, and exercise:
-- Popup before-setup → "Set up gitmarks" button visible
-- Options page validate + save flow with the mocked API
-- "Save this page" round-trip → mocked GitHub receives the PUT
-- `chrome.bookmarks.create` → expected PUT payload
-- Remote add seeded into the mock → bookmark appears in local tree
+E2e tests (4 passing, 2 skipped) launch real Chromium with the built
+extension and mock the GitHub API via Playwright route interception:
+- ✓ Popup before-setup → "Set up gitmarks" button visible
+- ✓ Options page validate against missing `bookmarks.json` (404 path)
+- ✓ `chrome.bookmarks.create` → expected PUT payload
+- ✓ Remote add seeded into the mock → bookmark appears in local tree
+- ⊘ Save flow via popup → GitHub PUT (skipped: depended on the dropped
+  `tabs` permission fallback; the save-flow logic is fully covered by
+  unit tests)
+- ⊘ Popup save view after configure (same dependency, same coverage)
 
 **Known gap (not fully understood):** during development we couldn't
 reliably get `chrome.bookmarks.*` events dispatched from
