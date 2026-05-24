@@ -94,6 +94,7 @@ async function render(): Promise<void> {
         { url: tab.url!, title: tab.title ?? tab.url! },
         machineId,
         new Date().toISOString(),
+        { stripTrackingParams: settings.stripTrackingParams },
       );
     } catch (err) {
       result = {

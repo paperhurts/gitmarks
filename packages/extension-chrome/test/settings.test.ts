@@ -12,9 +12,24 @@ describe("settings", () => {
       owner: "alice",
       repo: "bookmarks",
       branch: "main",
+      stripTrackingParams: false,
     };
     await saveSettings(s);
     expect(await loadSettings()).toEqual(s);
+  });
+
+  it("defaults stripTrackingParams to false when omitted in stored data", async () => {
+    // Legacy stored settings without the field should still parse via Zod's default.
+    await chrome.storage.local.set({
+      "gitmarks:settings": {
+        token: "t",
+        owner: "alice",
+        repo: "bookmarks",
+        branch: "main",
+      },
+    });
+    const loaded = await loadSettings();
+    expect(loaded?.stripTrackingParams).toBe(false);
   });
 
   it("throws SettingsCorruptError when the stored value is malformed", async () => {
@@ -28,6 +43,7 @@ describe("settings", () => {
       owner: "o",
       repo: "r",
       branch: "main",
+      stripTrackingParams: false,
     });
     await clearSettings();
     expect(await loadSettings()).toBeNull();
@@ -35,7 +51,7 @@ describe("settings", () => {
 
   it("rejects an empty token at save time", async () => {
     await expect(
-      saveSettings({ token: "", owner: "o", repo: "r", branch: "main" }),
+      saveSettings({ token: "", owner: "o", repo: "r", branch: "main", stripTrackingParams: false }),
     ).rejects.toThrow();
   });
 
@@ -46,6 +62,7 @@ describe("settings", () => {
         owner: "a/b",
         repo: "r",
         branch: "main",
+        stripTrackingParams: false,
       }),
     ).rejects.toThrow();
   });

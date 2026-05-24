@@ -7,6 +7,7 @@ export const settingsSchema = z.object({
   owner: z.string().regex(/^[A-Za-z0-9_.-]+$/, "owner must be a single GitHub login"),
   repo: z.string().regex(/^[A-Za-z0-9_.-]+$/, "repo must be a single GitHub repo name"),
   branch: z.string().min(1),
+  stripTrackingParams: z.boolean().default(false),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
