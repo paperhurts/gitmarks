@@ -5,10 +5,11 @@ import {
   type GitHubClient,
 } from "@gitmarks/core";
 
+import { BOOKMARKS_PATH } from "./bookmarks-file.js";
+
 export const RECONCILED_AT_KEY = "gitmarks:lastReconciledAt";
 export const LAST_ETAG_KEY = "gitmarks:bookmarksEtag";
 export const LAST_ERROR_KEY = "gitmarks:lastError";
-const BOOKMARKS_PATH = "bookmarks.json";
 
 declare const etagBrand: unique symbol;
 export type Etag = string & { readonly [etagBrand]: true };
