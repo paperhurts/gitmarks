@@ -8,7 +8,8 @@ you control.
 
 **Status:** Chrome extension is functional end-to-end (save via toolbar
 button, two-way sync with the native bookmark tree, 5-min poll for remote
-changes, automatic conflict retry). Firefox / Safari / web UI are next in
+changes, automatic conflict retry). Firefox MV3 add-on shipping the same
+source as Chrome via a shared package. Safari / web UI are next in
 the roadmap. See `spec.md` for the full design.
 
 ## Features (Chrome, today)
@@ -32,7 +33,9 @@ the roadmap. See `spec.md` for the full design.
 | Package | Role |
 |---|---|
 | `@gitmarks/core` | Shared TypeScript library: schemas (Zod), GitHub Contents API client with optimistic concurrency, ULID + URL helpers, pure mutation helpers |
-| `@gitmarks/extension-chrome` | Chrome MV3 extension. Save tabs, two-way sync with the native bookmark tree, 5-min poll, reconciliation |
+| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 96 unit tests live here. |
+| `@gitmarks/extension-chrome` | Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e. Thin entry files import from `extension-shared`. |
+| `@gitmarks/extension-firefox` | Firefox MV3 shell. Manifest + plain Vite build. Same source as Chrome via `extension-shared`. Load via `about:debugging`. |
 
 ## Quick start (Chrome extension)
 
@@ -88,7 +91,7 @@ The repo is a pnpm workspace monorepo. Each package has its own
 ## Architecture
 
 ```
-[Chrome ext] [Firefox ext (planned)] [Safari ext (planned)]    [Web UI (planned)]
+[Chrome ext] [Firefox ext] [Safari ext (planned)]    [Web UI (planned)]
        \             |                       /                       /
         \            |                      /                       /
          v           v                     v                       v
@@ -122,7 +125,7 @@ The load-bearing invariants:
 - ✅ Chrome MVP — toolbar-button save flow
 - ✅ Chrome native tree integration — listeners, reconcile, poll loop
 - ✅ Tracking-param stripping (opt-in)
-- ⬜ Firefox build ([#23](https://github.com/paperhurts/gitmarks/issues/23))
+- ✅ Firefox MV3 add-on ([#23](https://github.com/paperhurts/gitmarks/issues/23))
 - ⬜ Web UI v1: list + search + tag management ([#24](https://github.com/paperhurts/gitmarks/issues/24))
 - ⬜ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
 - ⬜ Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26))
