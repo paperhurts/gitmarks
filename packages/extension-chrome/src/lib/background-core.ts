@@ -55,6 +55,11 @@ export interface ReconcileDeps extends StorageOps {
 }
 
 export async function runMaybeReconcile(deps: ReconcileDeps): Promise<void> {
+  // lastReconciledAt is only bumped on success (see line below the catch).
+  // A failed reconcile therefore retries on the next service-worker cold
+  // start rather than waiting another full interval — do NOT move this
+  // stamp into the failure path or before the try block, or transient
+  // GitHub 5xx failures will silently cause an hour-long sync blackout.
   if (deps.now - deps.lastReconciledAt < deps.reconcileIntervalMs) return;
   try {
     await deps.runReconcile();
