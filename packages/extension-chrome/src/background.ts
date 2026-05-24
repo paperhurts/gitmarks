@@ -66,7 +66,7 @@ async function maybeReconcile(): Promise<void> {
       const idMap = await IdMap.load();
       const machineId = await getMachineId();
       const nowIso = new Date().toISOString();
-      await reconcile(client, idMap, bar, other, machineId, nowIso);
+      await reconcile(client, idMap, bar, other, machineId, nowIso, settings.stripTrackingParams);
     },
     setStorage: (items) => chrome.storage.local.set(items),
     removeStorage: (key) => chrome.storage.local.remove(key),
@@ -104,6 +104,10 @@ registerListeners({
   getIdMap: async () => IdMap.load(),
   getBarOtherIds,
   getMachineId,
+  getStripTrackingParams: async () => {
+    const s = await loadSettings();
+    return s?.stripTrackingParams ?? false;
+  },
 });
 
 chrome.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 5 });

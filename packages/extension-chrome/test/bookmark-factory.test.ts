@@ -55,6 +55,27 @@ describe("buildBookmark", () => {
     expect(bm.updated_at).toBe("2026-05-23T14:32:11Z");
   });
 
+  it("strips tracking params when stripTrackingParams is true (issue #6)", () => {
+    const bm = buildBookmark({
+      url: "https://example.com/?utm_source=feed&q=real",
+      title: "Article",
+      machineId: "ABCDE12F",
+      nowIso: "2026-05-23T14:32:11Z",
+      stripTrackingParams: true,
+    });
+    expect(bm.url).toBe("https://example.com/?q=real");
+  });
+
+  it("preserves tracking params when stripTrackingParams is false (default)", () => {
+    const bm = buildBookmark({
+      url: "https://example.com/?utm_source=feed",
+      title: "Article",
+      machineId: "ABCDE12F",
+      nowIso: "2026-05-23T14:32:11Z",
+    });
+    expect(bm.url).toBe("https://example.com/?utm_source=feed");
+  });
+
   it("generates a fresh ULID each call", () => {
     const a = buildBookmark({
       url: "https://example.com/",

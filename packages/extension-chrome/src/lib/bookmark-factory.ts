@@ -6,12 +6,16 @@ export interface BuildBookmarkInput {
   title: string;
   machineId: string;
   nowIso: string;
+  /** Strip tracking params (utm_, fbclid, gclid, etc.) at save time. Default false. */
+  stripTrackingParams?: boolean;
 }
 
 export function buildBookmark(input: BuildBookmarkInput): Bookmark {
   return {
     id: newUlid(),
-    url: normalizeUrl(input.url),
+    url: normalizeUrl(input.url, {
+      stripTrackingParams: input.stripTrackingParams ?? false,
+    }),
     title: input.title,
     folder: "",
     tags: [],
