@@ -8,20 +8,16 @@ const root = document.getElementById("root");
 if (root == null) throw new Error("#root not found");
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
-  // When opened as a real extension popup, currentWindow refers to the browser
-  // window the user was in (not the popup's own floating window), so this gives
-  // the tab the user was viewing.
+  // When opened as a real extension popup, currentWindow refers to the
+  // browser window the user was in (not the popup's own floating window),
+  // so this returns the tab they were viewing. activeTab grants access to
+  // title + url for that one tab on user-gesture popup open; no broader
+  // tabs permission is required.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab != null && tab.url != null && !tab.url.startsWith("chrome-extension://")) {
     return tab;
   }
-  // Fallback for cases where the popup is opened as a tab (e.g., in tests):
-  // return the most recently accessed regular tab.
-  const allTabs = await chrome.tabs.query({});
-  const regularTabs = allTabs
-    .filter(t => t.url != null && !t.url.startsWith("chrome-extension://") && !t.url.startsWith("about:"))
-    .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0));
-  return regularTabs[0] ?? null;
+  return null;
 }
 
 async function render(): Promise<void> {
