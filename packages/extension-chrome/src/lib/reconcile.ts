@@ -11,9 +11,7 @@ import {
 } from "@gitmarks/core";
 import { applyRemoteChanges } from "./apply-remote.js";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
-import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
-
-const BOOKMARKS_PATH = "bookmarks.json";
+import { updateBookmarksOrBootstrap, BOOKMARKS_PATH } from "./bookmarks-file.js";
 
 interface LocalEntry {
   nodeId: string;
