@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import type {
   BookmarksFile,
   Bookmark,
@@ -109,7 +110,7 @@ async function collectLocalBookmarks(
   otherBookmarksId: string,
 ): Promise<Map<string, LocalEntry>> {
   const out = new Map<string, LocalEntry>();
-  const tree = await chrome.bookmarks.getTree();
+  const tree = await browser.bookmarks.getTree();
   if (tree[0]?.children == null) return out;
 
   for (const top of tree[0].children) {

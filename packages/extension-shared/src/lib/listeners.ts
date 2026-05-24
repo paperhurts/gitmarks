@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import type {
   Bookmark,
   BookmarksFile,
@@ -54,10 +55,10 @@ export function __resetForTest(): void {
 
 export function registerListeners(d: ListenerDeps): void {
   deps = d;
-  chrome.bookmarks.onCreated.addListener(onCreated);
-  chrome.bookmarks.onChanged.addListener(onChanged);
-  chrome.bookmarks.onMoved.addListener(onMoved);
-  chrome.bookmarks.onRemoved.addListener(onRemoved);
+  browser.bookmarks.onCreated.addListener(onCreated);
+  browser.bookmarks.onChanged.addListener(onChanged);
+  browser.bookmarks.onMoved.addListener(onMoved);
+  browser.bookmarks.onRemoved.addListener(onRemoved);
 }
 
 function schedule(): void {
@@ -80,7 +81,7 @@ async function runFlush(): Promise<void> {
   try {
     await flushPending();
     consecutiveFailures = 0;
-    await chrome.storage.local.remove(LAST_ERROR_KEY);
+    await browser.storage.local.remove(LAST_ERROR_KEY);
   } catch (err) {
     consecutiveFailures += 1;
     console.error(
@@ -93,7 +94,7 @@ async function runFlush(): Promise<void> {
       source: "flush",
       kind: "unknown",
     };
-    await chrome.storage.local.set({ [LAST_ERROR_KEY]: record });
+    await browser.storage.local.set({ [LAST_ERROR_KEY]: record });
   } finally {
     flushing = false;
     if (pendingReschedule || pending.length > 0) {
