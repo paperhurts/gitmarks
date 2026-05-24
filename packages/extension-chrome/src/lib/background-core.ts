@@ -5,9 +5,9 @@ import {
   type GitHubClient,
 } from "@gitmarks/core";
 
-const RECONCILED_AT_KEY = "gitmarks:lastReconciledAt";
-const LAST_ETAG_KEY = "gitmarks:bookmarksEtag";
-const LAST_ERROR_KEY = "gitmarks:lastError";
+export const RECONCILED_AT_KEY = "gitmarks:lastReconciledAt";
+export const LAST_ETAG_KEY = "gitmarks:bookmarksEtag";
+export const LAST_ERROR_KEY = "gitmarks:lastError";
 const BOOKMARKS_PATH = "bookmarks.json";
 
 declare const etagBrand: unique symbol;
@@ -20,13 +20,38 @@ export function toEtag(s: string): Etag | null {
   return s.length > 0 ? (s as Etag) : null;
 }
 
-export interface ReconcileDeps {
+// Shape persisted under LAST_ERROR_KEY. Read by the popup to surface
+// background-poll / reconcile failures to the user.
+export interface LastErrorRecord {
+  when: number;
+  message: string;
+  source: "flush" | "poll" | "reconcile";
+  kind?: "auth" | "unknown" | "not_configured";
+}
+
+// Discriminated union of every key/value pair we may write to
+// chrome.storage.local from the orchestration layer. Replaces the prior
+// `Record<string, unknown>` looseness so a typo would land at compile time.
+export type StorageWrites =
+  | { [RECONCILED_AT_KEY]: number }
+  | { [LAST_ETAG_KEY]: string }
+  | { [LAST_ERROR_KEY]: LastErrorRecord };
+
+export type StorageKey =
+  | typeof RECONCILED_AT_KEY
+  | typeof LAST_ETAG_KEY
+  | typeof LAST_ERROR_KEY;
+
+export interface StorageOps {
+  setStorage: (items: StorageWrites) => Promise<void>;
+  removeStorage: (key: StorageKey) => Promise<void>;
+}
+
+export interface ReconcileDeps extends StorageOps {
   now: number;
   lastReconciledAt: number;
   reconcileIntervalMs: number;
   runReconcile: () => Promise<void>;
-  setStorage: (items: Record<string, unknown>) => Promise<void>;
-  removeStorage: (key: string) => Promise<void>;
 }
 
 export async function runMaybeReconcile(deps: ReconcileDeps): Promise<void> {
@@ -48,13 +73,11 @@ export async function runMaybeReconcile(deps: ReconcileDeps): Promise<void> {
   }
 }
 
-export interface PollDeps {
+export interface PollDeps extends StorageOps {
   etag: Etag | null;
   now: number;
   client: GitHubClient;
   applyRemote: (data: BookmarksFile) => Promise<void>;
-  setStorage: (items: Record<string, unknown>) => Promise<void>;
-  removeStorage: (key: string) => Promise<void>;
 }
 
 export async function runPollRemoteOnce(deps: PollDeps): Promise<void> {
