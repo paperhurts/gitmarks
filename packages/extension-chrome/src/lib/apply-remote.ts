@@ -38,7 +38,10 @@ export async function applyRemoteChanges(
       }
 
       if (existingNode != null) {
-        // Already in the local tree — assume in sync; next reconcile fixes drift.
+        // Remote bookmark already in the local tree — propagate title/url
+        // changes so users on Device A see edits from Device B within the
+        // 5-minute poll window (issue #1).
+        await applyRemoteEdit(existingNode, bm.url, bm.title);
         continue;
       }
 
@@ -61,6 +64,34 @@ export async function applyRemoteChanges(
     // match it.
     await idMap.save();
   }
+}
+
+async function applyRemoteEdit(
+  nodeId: string,
+  remoteUrl: string,
+  remoteTitle: string,
+): Promise<void> {
+  let current: chrome.bookmarks.BookmarkTreeNode | undefined;
+  try {
+    const found = await chrome.bookmarks.get(nodeId);
+    current = found[0];
+  } catch {
+    // Node may have been deleted locally between mapping and apply; skip.
+    return;
+  }
+  if (current == null) return;
+
+  const changes: { title?: string; url?: string } = {};
+  if (current.title !== remoteTitle) changes.title = remoteTitle;
+  if (current.url !== remoteUrl) changes.url = remoteUrl;
+  if (Object.keys(changes).length === 0) return;
+
+  // Suppress both the old URL (in case it's being changed away) and the new
+  // URL — the resulting onChanged echo will report the new URL.
+  if (current.url != null && current.url.length > 0) suppress(current.url);
+  suppress(remoteUrl);
+
+  await chrome.bookmarks.update(nodeId, changes);
 }
 
 async function ensureFolderPath(
