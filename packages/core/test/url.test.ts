@@ -57,4 +57,52 @@ describe("normalizeUrl", () => {
   it("throws on an invalid URL", () => {
     expect(() => normalizeUrl("not a url")).toThrow();
   });
+
+  describe("stripTrackingParams option", () => {
+    it("default (off): preserves utm_* params", () => {
+      expect(normalizeUrl("https://example.com/?utm_source=foo")).toBe(
+        "https://example.com/?utm_source=foo",
+      );
+    });
+
+    it("with stripTrackingParams: removes utm_* params", () => {
+      expect(
+        normalizeUrl("https://example.com/?utm_source=foo&utm_medium=bar", {
+          stripTrackingParams: true,
+        }),
+      ).toBe("https://example.com/");
+    });
+
+    it("with stripTrackingParams: removes fbclid, gclid, msclkid, mc_*", () => {
+      expect(
+        normalizeUrl("https://example.com/?fbclid=a&gclid=b&msclkid=c&mc_cid=d&mc_eid=e", {
+          stripTrackingParams: true,
+        }),
+      ).toBe("https://example.com/");
+    });
+
+    it("with stripTrackingParams: preserves non-tracking params", () => {
+      expect(
+        normalizeUrl("https://example.com/?utm_source=foo&q=real&page=2", {
+          stripTrackingParams: true,
+        }),
+      ).toBe("https://example.com/?q=real&page=2");
+    });
+
+    it("with stripTrackingParams: ignores parameter case (utm_Source treated as tracking)", () => {
+      expect(
+        normalizeUrl("https://example.com/?UTM_SOURCE=foo&Utm_Medium=bar", {
+          stripTrackingParams: true,
+        }),
+      ).toBe("https://example.com/");
+    });
+
+    it("stripping leaves an empty query string off the URL", () => {
+      expect(
+        normalizeUrl("https://example.com/path?utm_source=x", {
+          stripTrackingParams: true,
+        }),
+      ).toBe("https://example.com/path");
+    });
+  });
 });
