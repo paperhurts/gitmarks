@@ -85,8 +85,39 @@ describe("applyRemoteChanges", () => {
     expect(chrome.bookmarks.update).toHaveBeenCalledWith("node-1", {
       url: "https://example.com/new-path",
     });
-    // Suppress both old and new URL — the onChanged echo will fire with the new URL
+    // Suppress BOTH the new URL (carried in the onChanged echo) AND the old
+    // URL (in case a racing user edit on the old path is in flight).
     expect(isSuppressed("https://example.com/new-path")).toBe(true);
+    expect(isSuppressed("https://example.com/old-path")).toBe(true);
+  });
+
+  it("silently skips a mapped-but-locally-deleted node (chrome.bookmarks.get throws 'not found')", async () => {
+    const bm = bookmark({ id: "u1", url: "https://example.com/", title: "Doesn't matter" });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-gone"));
+
+    (chrome.bookmarks.get as any).mockRejectedValueOnce(
+      new Error("Can't find bookmark for id."),
+    );
+
+    // Should not throw; should not invoke update
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    expect(chrome.bookmarks.update).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-'not found' errors from chrome.bookmarks.get", async () => {
+    const bm = bookmark({ id: "u1", url: "https://example.com/", title: "Doesn't matter" });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
+
+    (chrome.bookmarks.get as any).mockRejectedValueOnce(
+      new Error("Extension context invalidated."),
+    );
+
+    await expect(
+      applyRemoteChanges(file([bm]), idMap, BAR, OTHER),
+    ).rejects.toThrow(/Extension context invalidated/);
   });
 
   it("skips the update call when remote matches local (no spurious onChanged)", async () => {

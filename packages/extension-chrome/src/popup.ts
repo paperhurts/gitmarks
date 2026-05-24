@@ -2,6 +2,7 @@ import { GitHubClient } from "@gitmarks/core";
 import { loadSettings, SettingsCorruptError } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
 import { saveBookmark, type SaveResult } from "./lib/save-flow.js";
+import type { LastErrorRecord } from "./lib/background-core.js";
 
 const root = document.getElementById("root");
 if (root == null) throw new Error("#root not found");
@@ -64,7 +65,7 @@ async function render(): Promise<void> {
   `;
 
   const errStored = await chrome.storage.local.get("gitmarks:lastError");
-  const lastErr = errStored["gitmarks:lastError"] as { message: string; source: string; kind?: string } | undefined;
+  const lastErr = errStored["gitmarks:lastError"] as LastErrorRecord | undefined;
   if (lastErr != null) {
     const banner = document.createElement("p");
     banner.className = "err";

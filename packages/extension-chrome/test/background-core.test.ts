@@ -8,6 +8,7 @@ import {
 import {
   runMaybeReconcile,
   runPollRemoteOnce,
+  toEtag,
 } from "../src/lib/background-core.js";
 
 const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
@@ -112,6 +113,12 @@ describe("runPollRemoteOnce", () => {
     return over as GitHubClient;
   }
 
+  it("toEtag returns null for empty string (rejects invalid representation)", async () => {
+    const { toEtag } = await import("../src/lib/background-core.js");
+    expect(toEtag("")).toBeNull();
+    expect(toEtag('"abc"')).not.toBeNull();
+  });
+
   it("calls read() (not readIfChanged) when etag is null", async () => {
     const read = vi.fn(async () => ({
       data: { version: 1, updated_at: "x", bookmarks: [] } as BookmarksFile,
@@ -145,7 +152,7 @@ describe("runPollRemoteOnce", () => {
     const storage = fakeStorage();
 
     await runPollRemoteOnce({
-      etag: '"prev-etag"',
+      etag: toEtag('"prev-etag"'),
       now: NOW,
       client: fakeClient({ readIfChanged }),
       applyRemote,
@@ -162,7 +169,7 @@ describe("runPollRemoteOnce", () => {
     const storage = fakeStorage();
 
     await runPollRemoteOnce({
-      etag: '"prev-etag"',
+      etag: toEtag('"prev-etag"'),
       now: NOW,
       client: fakeClient({ readIfChanged }),
       applyRemote,

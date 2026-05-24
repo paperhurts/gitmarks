@@ -1,7 +1,7 @@
 import type { BookmarksFile } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
-import { suppress } from "./suppression.js";
+import { suppress, suppressNode } from "./suppression.js";
 
 export async function applyRemoteChanges(
   remote: BookmarksFile,
@@ -75,9 +75,18 @@ async function applyRemoteEdit(
   try {
     const found = await chrome.bookmarks.get(nodeId);
     current = found[0];
-  } catch {
-    // Node may have been deleted locally between mapping and apply; skip.
-    return;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Can't find bookmark") || msg.includes("not found")) {
+      // Local node was deleted between mapping and apply — expected; skip.
+      return;
+    }
+    // Real failure (extension-context invalidated, managed bookmarks,
+    // permissions, etc.) — propagate so the outer poll catch records it.
+    console.error("[gitmarks] failed to read local node for remote edit", {
+      nodeId, err,
+    });
+    throw err;
   }
   if (current == null) return;
 
@@ -86,10 +95,15 @@ async function applyRemoteEdit(
   if (current.url !== remoteUrl) changes.url = remoteUrl;
   if (Object.keys(changes).length === 0) return;
 
-  // Suppress both the old URL (in case it's being changed away) and the new
-  // URL — the resulting onChanged echo will report the new URL.
+  // Prevent the resulting onChanged echo from being pushed back to GitHub
+  // as if it were a user edit (loop-back). Cover all three echo shapes:
+  //   - URL change: changeInfo carries the NEW url → suppress(remoteUrl)
+  //   - URL change races a user edit on the OLD url → suppress(current.url)
+  //   - title-only change: changeInfo.url is undefined → URL suppression
+  //     can't see it, so we also key suppression by node id.
   if (current.url != null && current.url.length > 0) suppress(current.url);
   suppress(remoteUrl);
+  suppressNode(nodeId);
 
   await chrome.bookmarks.update(nodeId, changes);
 }
