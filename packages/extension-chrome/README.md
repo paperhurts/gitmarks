@@ -191,12 +191,34 @@ truly isolated). The listener-debounce-flush dispatch path is verified
 by unit tests; the live wiring is verified by the manual smoke test
 above.
 
+## Known limitations
+
+**Folder-delete cascade is not handled.** When you delete a folder in
+Chrome that contains synced bookmarks, `chrome.bookmarks.onRemoved` fires
+for the folder node only — Chrome does not emit individual `onRemoved`
+events for the children (they're gone by the time the listener fires,
+and the API does not expose the just-removed subtree). The folder has
+no ULID mapping (only URL-bearing nodes do), so the listener no-ops.
+The bookmarks remain in remote `bookmarks.json`; on the next 5-min poll
+they get re-created locally under the bookmarks bar.
+
+**Workaround:** delete the bookmarks from GitHub directly (or via the
+forthcoming web UI), or delete the bookmarks individually from Chrome
+before deleting the folder.
+
+**Why this isn't fixed in v1:** correctly cascading the delete requires
+either (a) maintaining a folder→children index in `chrome.storage.local`
+that's kept in sync with every reconcile + listener event, or (b)
+walking the local tree on every poll to detect orphaned-on-remote
+entries. Both are substantial work for a relatively rare and recoverable
+user action. Filed and closed as #2.
+
 ## Out of scope
 
 - `onMoved`-driven folder updates from listeners (next reconcile catches drift)
 - Subtree-move performance optimization for thousands of bookmarks
-- Tracking-param URL stripping (`utm_*`)
-- Folder-rename batching for thousands of bookmarks
-- Tags UI (tags live in the JSON but no UI here yet — web UI scope)
+- Tracking-param URL stripping (`utm_*`) — tracked as #6
+- Folder-rename batching for thousands of bookmarks — closed as #7 (blocked on onMoved push handling)
+- Tags UI (tags live in the JSON but no UI here yet — web UI scope, #24/#25)
 - Icons (Chrome shows the default puzzle piece)
 - Conflict resolution beyond core's automatic 409/422 retry
