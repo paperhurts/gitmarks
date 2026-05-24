@@ -29,6 +29,8 @@ export interface ListenerDeps {
   getIdMap: () => Promise<IdMap>;
   getBarOtherIds: () => Promise<{ bar: string; other: string }>;
   getMachineId: () => Promise<string>;
+  /** Defaults to false if not provided (preserves current behavior in tests). */
+  getStripTrackingParams?: () => Promise<boolean>;
 }
 
 let pending: Pending[] = [];
@@ -145,6 +147,7 @@ export async function flushPending(): Promise<void> {
 
   const idMap = await deps.getIdMap();
   const machineId = await deps.getMachineId();
+  const stripTrackingParams = (await deps.getStripTrackingParams?.()) ?? false;
   const nowIso = new Date().toISOString();
 
   // A node that has a create event in this same batch should accept
@@ -208,7 +211,7 @@ export async function flushPending(): Promise<void> {
     (current) => {
       toAdd.length = 0;
       toRemove.length = 0;
-      return applyBatch(current, surviving, idMap, createUlids, machineId, nowIso, toAdd, toRemove);
+      return applyBatch(current, surviving, idMap, createUlids, machineId, nowIso, stripTrackingParams, toAdd, toRemove);
     },
     `sync ${surviving.length} change(s) from chrome@${machineId}`,
     machineId,
@@ -235,6 +238,7 @@ function applyBatch(
   createUlids: Map<string, string>,
   machineId: string,
   nowIso: string,
+  stripTrackingParams: boolean,
   toAdd: Array<{ ulid: string; nodeId: string }>,
   toRemove: string[],
 ): BookmarksFile {
@@ -247,7 +251,7 @@ function applyBatch(
       if (id == null) continue;
       const bm: Bookmark = {
         id,
-        url: normalizeUrl(event.url),
+        url: normalizeUrl(event.url, { stripTrackingParams }),
         title: event.title,
         folder: "",
         tags: [],
@@ -270,7 +274,7 @@ function applyBatch(
       if (existing == null) continue;
       const patch: Partial<Omit<Bookmark, "id">> = {};
       if ("url" in event && event.url !== undefined) {
-        const normalized = normalizeUrl(event.url);
+        const normalized = normalizeUrl(event.url, { stripTrackingParams });
         if (normalized !== existing.url) patch.url = normalized;
       }
       if ("title" in event && event.title !== undefined) {

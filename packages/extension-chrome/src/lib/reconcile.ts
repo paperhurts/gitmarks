@@ -26,6 +26,7 @@ export async function reconcile(
   otherBookmarksId: string,
   machineId: string,
   nowIso: string,
+  stripTrackingParams = false,
 ): Promise<void> {
   let remote: BookmarksFile;
   try {
@@ -70,7 +71,7 @@ export async function reconcile(
     const id = newUlid();
     const bm: Bookmark = {
       id,
-      url: normalizeUrl(local.url),
+      url: normalizeUrl(local.url, { stripTrackingParams }),
       title: local.title,
       folder: "",
       tags: [],
