@@ -1,3 +1,5 @@
+import browser from "webextension-polyfill";
+
 // Branded string types — nominal phantom types that prevent argument-swap bugs.
 declare const ulidBrand: unique symbol;
 declare const nodeIdBrand: unique symbol;
@@ -35,7 +37,7 @@ export class IdMap {
   }
 
   static async load(): Promise<IdMap> {
-    const stored = await chrome.storage.local.get(KEY);
+    const stored = await browser.storage.local.get(KEY);
     const raw = stored[KEY];
     const map = new IdMap();
     if (raw == null || typeof raw !== "object") return map;
@@ -50,7 +52,7 @@ export class IdMap {
 
   async save(): Promise<void> {
     const entries = Array.from(this.#ulidToNode.entries());
-    await chrome.storage.local.set({ [KEY]: { entries } });
+    await browser.storage.local.set({ [KEY]: { entries } });
   }
 
   /**
