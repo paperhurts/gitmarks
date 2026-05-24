@@ -88,10 +88,12 @@ pnpm --filter @gitmarks/extension-chrome e2e
 1. ✅ `@gitmarks/core`
 2. ✅ Chrome MVP (toolbar save)
 3. ✅ Chrome native tree integration
-4. ⬜ Firefox build (`webextension-polyfill` over the same source)
-5. ⬜ Web UI: list / search / tag management (Vite + React + Tailwind SPA)
-6. ⬜ Web UI: bulk operations + trash + export
-7. ⬜ Safari (`safari-web-extension-converter` over the Chrome bundle)
+4. ⬜ Firefox build (`webextension-polyfill`) — issue [#23](https://github.com/paperhurts/gitmarks/issues/23)
+5. ⬜ Web UI v1: list / search / tag management — issue [#24](https://github.com/paperhurts/gitmarks/issues/24)
+6. ⬜ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
+7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
+
+For next-piece-of-work: pick one of #23–#26. Each has a scope block in its issue description. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
 
 ## Non-goals (do not implement)
 
