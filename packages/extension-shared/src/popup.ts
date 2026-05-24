@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import { GitHubClient } from "@gitmarks/core";
 import { loadSettings, SettingsCorruptError } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
@@ -7,13 +8,13 @@ import type { LastErrorRecord } from "./lib/background-core.js";
 const root = document.getElementById("root");
 if (root == null) throw new Error("#root not found");
 
-async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
+async function getActiveTab(): Promise<browser.Tabs.Tab | null> {
   // When opened as a real extension popup, currentWindow refers to the
   // browser window the user was in (not the popup's own floating window),
   // so this returns the tab they were viewing. activeTab grants access to
   // title + url for that one tab on user-gesture popup open; no broader
   // tabs permission is required.
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (tab != null && tab.url != null && !tab.url.startsWith("chrome-extension://")) {
     return tab;
   }
@@ -29,7 +30,7 @@ async function render(): Promise<void> {
       root!.innerHTML = `<p class="err">Settings are corrupted — please reconfigure gitmarks.</p>
         <button id="setup">Open settings</button>`;
       document.getElementById("setup")?.addEventListener("click", () => {
-        chrome.runtime.openOptionsPage();
+        browser.runtime.openOptionsPage();
         window.close();
       });
       return;
@@ -42,7 +43,7 @@ async function render(): Promise<void> {
       <button id="setup">Set up gitmarks</button>
     `;
     document.getElementById("setup")!.addEventListener("click", () => {
-      chrome.runtime.openOptionsPage();
+      browser.runtime.openOptionsPage();
       window.close();
     });
     return;
@@ -60,7 +61,7 @@ async function render(): Promise<void> {
     <p id="status"></p>
   `;
 
-  const errStored = await chrome.storage.local.get("gitmarks:lastError");
+  const errStored = await browser.storage.local.get("gitmarks:lastError");
   const lastErr = errStored["gitmarks:lastError"] as LastErrorRecord | undefined;
   if (lastErr != null) {
     const banner = document.createElement("p");

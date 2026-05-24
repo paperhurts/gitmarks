@@ -1,3 +1,5 @@
+import browser from "webextension-polyfill";
+
 const KEY = "gitmarks:machineId";
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford base32
 
@@ -10,12 +12,12 @@ function newId(): string {
 }
 
 export async function getMachineId(): Promise<string> {
-  const stored = await chrome.storage.local.get(KEY);
+  const stored = await browser.storage.local.get(KEY);
   const existing = stored[KEY];
   if (typeof existing === "string" && /^[0-9A-HJKMNP-TV-Z]{8}$/.test(existing)) {
     return existing;
   }
   const fresh = newId();
-  await chrome.storage.local.set({ [KEY]: fresh });
+  await browser.storage.local.set({ [KEY]: fresh });
   return fresh;
 }

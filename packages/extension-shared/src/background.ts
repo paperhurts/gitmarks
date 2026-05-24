@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import { GitHubClient } from "@gitmarks/core";
 import { loadSettings, type Settings } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
@@ -19,7 +20,7 @@ async function getBarOtherIds(): Promise<{ bar: string; other: string }> {
   if (cachedBarId != null && cachedOtherId != null) {
     return { bar: cachedBarId, other: cachedOtherId };
   }
-  const tree = await chrome.bookmarks.getTree();
+  const tree = await browser.bookmarks.getTree();
   const root = tree[0];
   if (root?.children == null) {
     throw new Error("unexpected chrome.bookmarks tree shape");
@@ -51,7 +52,7 @@ async function maybeReconcile(): Promise<void> {
   const settings = await loadSettings();
   if (settings == null) return;
 
-  const stored = await chrome.storage.local.get(RECONCILED_AT_KEY);
+  const stored = await browser.storage.local.get(RECONCILED_AT_KEY);
   const lastReconciledAt = typeof stored[RECONCILED_AT_KEY] === "number"
     ? (stored[RECONCILED_AT_KEY] as number)
     : 0;
@@ -68,8 +69,8 @@ async function maybeReconcile(): Promise<void> {
       const nowIso = new Date().toISOString();
       await reconcile(client, idMap, bar, other, machineId, nowIso, settings.stripTrackingParams);
     },
-    setStorage: (items) => chrome.storage.local.set(items),
-    removeStorage: (key) => chrome.storage.local.remove(key),
+    setStorage: (items) => browser.storage.local.set(items),
+    removeStorage: (key) => browser.storage.local.remove(key),
   });
 }
 
@@ -77,7 +78,7 @@ async function pollRemoteOnce(): Promise<void> {
   const settings = await loadSettings();
   if (settings == null) return;
   const client = buildClient(settings);
-  const stored = await chrome.storage.local.get(LAST_ETAG_KEY);
+  const stored = await browser.storage.local.get(LAST_ETAG_KEY);
   const rawEtag = stored[LAST_ETAG_KEY];
   const etag = typeof rawEtag === "string" ? toEtag(rawEtag) : null;
 
@@ -90,8 +91,8 @@ async function pollRemoteOnce(): Promise<void> {
       const idMap = await IdMap.load();
       await applyRemoteChanges(data, idMap, bar, other);
     },
-    setStorage: (items) => chrome.storage.local.set(items),
-    removeStorage: (key) => chrome.storage.local.remove(key),
+    setStorage: (items) => browser.storage.local.set(items),
+    removeStorage: (key) => browser.storage.local.remove(key),
   });
 }
 
@@ -110,8 +111,8 @@ registerListeners({
   },
 });
 
-chrome.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 5 });
-chrome.alarms.onAlarm.addListener((alarm) => {
+browser.alarms.create(POLL_ALARM_NAME, { periodInMinutes: 5 });
+browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POLL_ALARM_NAME) {
     void pollRemoteOnce();
   }

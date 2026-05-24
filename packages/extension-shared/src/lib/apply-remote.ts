@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import type { BookmarksFile } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
@@ -17,7 +18,7 @@ export async function applyRemoteChanges(
         if (existingNode != null) {
           suppress(bm.url);
           try {
-            await chrome.bookmarks.remove(existingNode);
+            await browser.bookmarks.remove(existingNode);
             idMap.removeByUlid(asUlid(bm.id));
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -51,7 +52,7 @@ export async function applyRemoteChanges(
         otherBookmarksId,
       );
       suppress(bm.url);
-      const created = await chrome.bookmarks.create({
+      const created = await browser.bookmarks.create({
         parentId,
         title: bm.title,
         url: bm.url,
@@ -73,7 +74,7 @@ async function applyRemoteEdit(
 ): Promise<void> {
   let current: chrome.bookmarks.BookmarkTreeNode | undefined;
   try {
-    const found = await chrome.bookmarks.get(nodeId);
+    const found = await browser.bookmarks.get(nodeId);
     current = found[0];
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -105,7 +106,7 @@ async function applyRemoteEdit(
   suppress(remoteUrl);
   suppressNode(nodeId);
 
-  await chrome.bookmarks.update(nodeId, changes);
+  await browser.bookmarks.update(nodeId, changes);
 }
 
 async function ensureFolderPath(
@@ -122,13 +123,13 @@ async function ensureFolderPath(
 }
 
 async function ensureSubfolder(parentId: string, title: string): Promise<string> {
-  const children = await chrome.bookmarks.getSubTree(parentId);
+  const children = await browser.bookmarks.getSubTree(parentId);
   const parent = children[0];
   if (parent?.children != null) {
     for (const child of parent.children) {
       if (child.url == null && child.title === title) return child.id;
     }
   }
-  const folder = await chrome.bookmarks.create({ parentId, title });
+  const folder = await browser.bookmarks.create({ parentId, title });
   return folder.id;
 }

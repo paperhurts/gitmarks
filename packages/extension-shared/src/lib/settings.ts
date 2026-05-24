@@ -1,3 +1,4 @@
+import browser from "webextension-polyfill";
 import { z } from "zod";
 
 const SETTINGS_KEY = "gitmarks:settings";
@@ -20,7 +21,7 @@ export class SettingsCorruptError extends Error {
 }
 
 export async function loadSettings(): Promise<Settings | null> {
-  const result = await chrome.storage.local.get(SETTINGS_KEY);
+  const result = await browser.storage.local.get(SETTINGS_KEY);
   const raw = result[SETTINGS_KEY];
   if (raw == null) return null;
   const parsed = settingsSchema.safeParse(raw);
@@ -37,9 +38,9 @@ export async function loadSettings(): Promise<Settings | null> {
 
 export async function saveSettings(value: Settings): Promise<void> {
   const validated = settingsSchema.parse(value);
-  await chrome.storage.local.set({ [SETTINGS_KEY]: validated });
+  await browser.storage.local.set({ [SETTINGS_KEY]: validated });
 }
 
 export async function clearSettings(): Promise<void> {
-  await chrome.storage.local.remove(SETTINGS_KEY);
+  await browser.storage.local.remove(SETTINGS_KEY);
 }
