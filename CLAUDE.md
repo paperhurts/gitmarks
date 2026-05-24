@@ -43,25 +43,35 @@ Pure TypeScript ESM library. No browser APIs, no React. Three layers:
 
 The public API is curated via `src/index.ts` (21 exports). Anything not exported is internal — never deep-import from this package.
 
-### `@gitmarks/extension-chrome` (`packages/extension-chrome/`)
+### `@gitmarks/extension-shared` (`packages/extension-shared/`)
 
-MV3 Chrome extension. Vite + `@crxjs/vite-plugin` build.
+Cross-browser source — owns all popup, options, background, and `src/lib/` modules. Both browser shells import from here via the `exports` map (`./background`, `./popup`, `./options`). Uses `browser.*` via `webextension-polyfill`. No framework — vanilla HTML+TS.
 
-- **UI:** vanilla HTML+TS for popup and options pages. No framework.
-- **Service worker** (`src/background.ts`): registers `chrome.bookmarks.*` listeners, creates the periodic poll alarm, runs initial reconciliation on cold start when stale.
+- **Service worker** (`src/background.ts`): registers `browser.bookmarks.*` listeners, creates the periodic poll alarm, runs initial reconciliation on cold start when stale.
 - **Pure libs** (`src/lib/`):
-  - `settings.ts` — Zod-validated `chrome.storage.local` wrapper
+  - `settings.ts` — Zod-validated `browser.storage.local` wrapper
   - `machine-id.ts` — 8-char Crockford base32 ID, persisted
-  - `bookmark-factory.ts` — `{url, title, machineId, nowIso}` → `Bookmark`
+  - `bookmark-factory.ts` — `{url, title, machineId, nowIso, stripTrackingParams?}` → `Bookmark`
   - `save-flow.ts` — orchestration; on first-save 404, bootstraps with empty file then retries
   - `folder-path.ts` — tree node ↔ `"Research/AI"` path conversion
   - `id-mapping.ts` — bidirectional `{ulid: chromeNodeId}` map
-  - `suppression.ts` — in-memory URL TTL map (2s) to prevent loop-back
-  - `apply-remote.ts` — push a `BookmarksFile` state into `chrome.bookmarks`
+  - `suppression.ts` — in-memory URL + nodeId TTL maps (2s) to prevent loop-back
+  - `apply-remote.ts` — push a `BookmarksFile` state into `browser.bookmarks`
   - `reconcile.ts` — merge local tree and remote file by URL on cold start
-  - `listeners.ts` — `chrome.bookmarks.*` listeners with 500ms global debounce, batched flush
+  - `listeners.ts` — `browser.bookmarks.*` listeners with 500ms global debounce, batched flush
+  - `background-core.ts` — dependency-injected `runMaybeReconcile` and `runPollRemoteOnce` (testable orchestration extracted from the SW entry)
+  - `bookmarks-file.ts` — `BOOKMARKS_PATH` + `updateBookmarksOrBootstrap` shared by save-flow, listeners, reconcile
 
-**Popup save vs. SW save** (architectural decision worth noting): the popup constructs its own `GitHubClient` and calls `saveBookmark` directly in the page context. The service worker handles `chrome.bookmarks.*` events and the poll alarm. The two paths don't talk via `chrome.runtime.sendMessage`. This split is intentional — it makes the popup save reliable (clear page lifecycle) and keeps the SW focused on event-driven work.
+**Popup save vs. SW save** (architectural decision worth noting): the popup constructs its own `GitHubClient` and calls `saveBookmark` directly in the page context. The service worker handles `browser.bookmarks.*` events and the poll alarm. The two paths don't talk via `browser.runtime.sendMessage`. This split is intentional — it makes the popup save reliable (clear page lifecycle) and keeps the SW focused on event-driven work.
+
+### `@gitmarks/extension-chrome` and `@gitmarks/extension-firefox` (shells)
+
+Each is a thin browser-specific shell over `@gitmarks/extension-shared`:
+- Own manifest (Chrome: TS via `@crxjs/vite-plugin defineManifest`; Firefox: literal `manifest.json` copied into `dist/` post-build by `scripts/copy-manifest.mjs`)
+- Own Vite config (Chrome: `crx({manifest})` plugin; Firefox: plain multi-entry with `root: "src"` + `outDir: "../dist"`)
+- Own entry files that side-effect-import from `@gitmarks/extension-shared/{background,popup,options}`
+- Own HTML files (duplicated across shells because Vite needs them as build inputs — known follow-up)
+- Chrome owns the Playwright e2e suite; Firefox relies on the manual smoke test in its README
 
 ## Testing
 

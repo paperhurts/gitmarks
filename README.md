@@ -81,7 +81,7 @@ pnpm build
 
 # Just one package
 pnpm --filter @gitmarks/core test
-pnpm --filter @gitmarks/extension-chrome test
+pnpm --filter @gitmarks/extension-shared test   # all extension unit tests live here
 pnpm --filter @gitmarks/extension-chrome e2e    # Playwright + real Chromium
 ```
 
