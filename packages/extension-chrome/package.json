@@ -18,7 +18,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.28",
+    "@crxjs/vite-plugin": "^2.4.0",
     "@playwright/test": "^1.48.0",
     "@types/chrome": "^0.0.268",
     "jsdom": "^25.0.0",
