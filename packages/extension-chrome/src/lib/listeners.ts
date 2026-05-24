@@ -11,12 +11,12 @@ import {
   updateBookmark,
 } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
-import { isSuppressed } from "./suppression.js";
+import { isSuppressed, isNodeSuppressed } from "./suppression.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
+import { LAST_ERROR_KEY, type LastErrorRecord } from "./background-core.js";
 
 const DEBOUNCE_MS = 500;
 const MAX_BACKOFF_MS = 60_000;
-const LAST_ERROR_KEY = "gitmarks:lastError";
 
 type Pending =
   | { kind: "create"; nodeId: string; url: string; title: string }
@@ -85,13 +85,13 @@ async function runFlush(): Promise<void> {
       `[gitmarks] flushPending failed (attempt ${consecutiveFailures}); pending edits remain queued`,
       err,
     );
-    await chrome.storage.local.set({
-      [LAST_ERROR_KEY]: {
-        when: Date.now(),
-        message: err instanceof Error ? err.message : String(err),
-        source: "flush",
-      },
-    });
+    const record: LastErrorRecord = {
+      when: Date.now(),
+      message: err instanceof Error ? err.message : String(err),
+      source: "flush",
+      kind: "unknown",
+    };
+    await chrome.storage.local.set({ [LAST_ERROR_KEY]: record });
   } finally {
     flushing = false;
     if (pendingReschedule || pending.length > 0) {
@@ -154,10 +154,14 @@ export async function flushPending(): Promise<void> {
     // to do (issue #8).
     if (p.kind === "update") {
       if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      // NodeId-suppression catches title-only echoes from apply-remote.update
+      // (changeInfo.url is undefined for title-only changes — issue #18 A).
+      if (isNodeSuppressed(p.nodeId)) return false;
       return p.url == null || !isSuppressed(p.url);
     }
     if (p.kind === "remove") {
       if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      if (isNodeSuppressed(p.nodeId)) return false;
       return !isSuppressed(p.url);
     }
     return true;

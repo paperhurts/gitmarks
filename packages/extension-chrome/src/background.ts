@@ -5,7 +5,7 @@ import { IdMap } from "./lib/id-mapping.js";
 import { reconcile } from "./lib/reconcile.js";
 import { registerListeners } from "./lib/listeners.js";
 import { applyRemoteChanges } from "./lib/apply-remote.js";
-import { runMaybeReconcile, runPollRemoteOnce } from "./lib/background-core.js";
+import { runMaybeReconcile, runPollRemoteOnce, toEtag } from "./lib/background-core.js";
 
 const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
 const POLL_ALARM_NAME = "gitmarks:poll";
@@ -78,9 +78,8 @@ async function pollRemoteOnce(): Promise<void> {
   if (settings == null) return;
   const client = buildClient(settings);
   const stored = await chrome.storage.local.get(LAST_ETAG_KEY);
-  const etag = typeof stored[LAST_ETAG_KEY] === "string"
-    ? (stored[LAST_ETAG_KEY] as string)
-    : null;
+  const rawEtag = stored[LAST_ETAG_KEY];
+  const etag = typeof rawEtag === "string" ? toEtag(rawEtag) : null;
 
   await runPollRemoteOnce({
     etag,
