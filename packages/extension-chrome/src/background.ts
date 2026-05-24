@@ -1,15 +1,11 @@
-import {
-  GitHubClient,
-  GitHubNotFoundError,
-  GitHubAuthError,
-  type BookmarksFile,
-} from "@gitmarks/core";
+import { GitHubClient } from "@gitmarks/core";
 import { loadSettings, type Settings } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
 import { IdMap } from "./lib/id-mapping.js";
 import { reconcile } from "./lib/reconcile.js";
 import { registerListeners } from "./lib/listeners.js";
 import { applyRemoteChanges } from "./lib/apply-remote.js";
+import { runMaybeReconcile, runPollRemoteOnce } from "./lib/background-core.js";
 
 const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
 const POLL_ALARM_NAME = "gitmarks:poll";
@@ -56,32 +52,25 @@ async function maybeReconcile(): Promise<void> {
   if (settings == null) return;
 
   const stored = await chrome.storage.local.get(RECONCILED_AT_KEY);
-  const last = typeof stored[RECONCILED_AT_KEY] === "number"
+  const lastReconciledAt = typeof stored[RECONCILED_AT_KEY] === "number"
     ? (stored[RECONCILED_AT_KEY] as number)
     : 0;
-  if (Date.now() - last < RECONCILE_INTERVAL_MS) return;
 
-  const { bar, other } = await getBarOtherIds();
-  const client = buildClient(settings);
-  const idMap = await IdMap.load();
-  const machineId = await getMachineId();
-  const nowIso = new Date().toISOString();
-
-  try {
-    await reconcile(client, idMap, bar, other, machineId, nowIso);
-    await chrome.storage.local.set({ [RECONCILED_AT_KEY]: Date.now() });
-    await chrome.storage.local.remove("gitmarks:lastError");
-  } catch (err) {
-    console.error("[gitmarks] reconcile failed", err);
-    await chrome.storage.local.set({
-      "gitmarks:lastError": {
-        when: Date.now(),
-        message: err instanceof Error ? err.message : String(err),
-        source: "reconcile",
-        kind: err instanceof GitHubAuthError ? "auth" : "unknown",
-      },
-    });
-  }
+  await runMaybeReconcile({
+    now: Date.now(),
+    lastReconciledAt,
+    reconcileIntervalMs: RECONCILE_INTERVAL_MS,
+    runReconcile: async () => {
+      const { bar, other } = await getBarOtherIds();
+      const client = buildClient(settings);
+      const idMap = await IdMap.load();
+      const machineId = await getMachineId();
+      const nowIso = new Date().toISOString();
+      await reconcile(client, idMap, bar, other, machineId, nowIso);
+    },
+    setStorage: (items) => chrome.storage.local.set(items),
+    removeStorage: (key) => chrome.storage.local.remove(key),
+  });
 }
 
 async function pollRemoteOnce(): Promise<void> {
@@ -93,28 +82,18 @@ async function pollRemoteOnce(): Promise<void> {
     ? (stored[LAST_ETAG_KEY] as string)
     : null;
 
-  try {
-    const result = etag
-      ? await client.readIfChanged<BookmarksFile>("bookmarks.json", etag)
-      : await client.read<BookmarksFile>("bookmarks.json");
-    if (result == null) return;
-    const { bar, other } = await getBarOtherIds();
-    const idMap = await IdMap.load();
-    await applyRemoteChanges(result.data, idMap, bar, other);
-    await chrome.storage.local.set({ [LAST_ETAG_KEY]: result.etag });
-    await chrome.storage.local.remove("gitmarks:lastError");
-  } catch (err) {
-    if (err instanceof GitHubNotFoundError) return;
-    console.error("[gitmarks] poll failed", err);
-    await chrome.storage.local.set({
-      "gitmarks:lastError": {
-        when: Date.now(),
-        message: err instanceof Error ? err.message : String(err),
-        source: "poll",
-        kind: err instanceof GitHubAuthError ? "auth" : "unknown",
-      },
-    });
-  }
+  await runPollRemoteOnce({
+    etag,
+    now: Date.now(),
+    client,
+    applyRemote: async (data) => {
+      const { bar, other } = await getBarOtherIds();
+      const idMap = await IdMap.load();
+      await applyRemoteChanges(data, idMap, bar, other);
+    },
+    setStorage: (items) => chrome.storage.local.set(items),
+    removeStorage: (key) => chrome.storage.local.remove(key),
+  });
 }
 
 registerListeners({
