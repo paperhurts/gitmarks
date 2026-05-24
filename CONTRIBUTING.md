@@ -53,6 +53,14 @@ pnpm --filter @gitmarks/extension-chrome e2e    # Playwright + real Chromium (lo
 - **Strict mode is non-negotiable.** `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax` are all on.
 - **Pure-functional core.** `@gitmarks/core` has zero `chrome.*` access; the extension's `src/lib/` modules split cleanly into "touches chrome.*" and "pure logic, unit-testable".
 - **Tests are the design contract.** When a fix or feature changes behavior, the regression test is part of the same PR.
+- **Test-driven development.** New behavior is written test-first:
+  1. Write one failing test that names the behavior in human terms
+  2. Run it. Watch it fail. If it passes immediately, the test isn't testing what you think.
+  3. Watch it fail for the *expected reason* (missing function, wrong return — not a typo, not an import error). If the failure mode is wrong, fix the test until it fails right.
+  4. Write the minimal code to make it pass — no extra features, no premature abstractions.
+  5. Run it. Watch it pass. Confirm nothing else broke.
+  6. Refactor if needed, keeping the suite green.
+  Bug fixes: write the test that reproduces the bug *first*. Refactors that change observable behavior: same rule. Pure renames / type-design refactors where the existing tests already exercise the surface don't need new tests, but you should re-run the suite to confirm the refactor preserved behavior.
 - **No comments restating what the code does.** Only WHY comments where the rationale is genuinely non-obvious. See existing module comments for the style.
 
 ## Security
