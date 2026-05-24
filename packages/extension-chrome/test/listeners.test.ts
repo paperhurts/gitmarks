@@ -214,6 +214,33 @@ describe("listeners", () => {
     expect(captured!.bookmarks[0]!.title).toBe("New title");
   });
 
+  it("onChanged with no URL is suppressed when nodeId is in the node-suppression registry (title-only echo from apply-remote)", async () => {
+    // Issue #18 finding A: apply-remote's chrome.bookmarks.update({title})
+    // fires onChanged with changeInfo.url === undefined. URL-suppression
+    // doesn't catch the echo. NodeId-suppression does.
+    const update = vi.fn();
+    const client = fakeClient({ update });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => idMap,
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const { suppressNode } = await import("../src/lib/suppression.js");
+    suppressNode("node-1");
+
+    const changeListener = (chrome.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    changeListener("node-1", { title: "new" });
+
+    await flushPending();
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("onChanged for an unmapped node skips the GitHub round-trip entirely", async () => {
     // Issue #8: when onChanged fires for a node with no ULID mapping, the
     // previous behavior called client.update() with a no-op mutate — a wasted
