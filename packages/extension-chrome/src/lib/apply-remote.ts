@@ -75,9 +75,18 @@ async function applyRemoteEdit(
   try {
     const found = await chrome.bookmarks.get(nodeId);
     current = found[0];
-  } catch {
-    // Node may have been deleted locally between mapping and apply; skip.
-    return;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Can't find bookmark") || msg.includes("not found")) {
+      // Local node was deleted between mapping and apply — expected; skip.
+      return;
+    }
+    // Real failure (extension-context invalidated, managed bookmarks,
+    // permissions, etc.) — propagate so the outer poll catch records it.
+    console.error("[gitmarks] failed to read local node for remote edit", {
+      nodeId, err,
+    });
+    throw err;
   }
   if (current == null) return;
 
