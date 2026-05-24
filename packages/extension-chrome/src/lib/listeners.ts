@@ -11,7 +11,7 @@ import {
   updateBookmark,
 } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
-import { isSuppressed } from "./suppression.js";
+import { isSuppressed, isNodeSuppressed } from "./suppression.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
 
 const DEBOUNCE_MS = 500;
@@ -154,10 +154,14 @@ export async function flushPending(): Promise<void> {
     // to do (issue #8).
     if (p.kind === "update") {
       if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      // NodeId-suppression catches title-only echoes from apply-remote.update
+      // (changeInfo.url is undefined for title-only changes — issue #18 A).
+      if (isNodeSuppressed(p.nodeId)) return false;
       return p.url == null || !isSuppressed(p.url);
     }
     if (p.kind === "remove") {
       if (idMap.ulidForNode(asNodeId(p.nodeId)) == null) return false;
+      if (isNodeSuppressed(p.nodeId)) return false;
       return !isSuppressed(p.url);
     }
     return true;
