@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "gitmarks",
+  "version": "0.0.1",
+  "description": "Save bookmarks to your own GitHub repo.",
+  "permissions": ["storage", "activeTab", "bookmarks", "alarms"],
+  "host_permissions": ["https://api.github.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "gitmarks"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gitmarks@paperhurts.dev",
+      "strict_min_version": "121.0"
+    }
+  }
+}
