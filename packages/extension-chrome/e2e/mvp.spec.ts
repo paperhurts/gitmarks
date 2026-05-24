@@ -9,7 +9,14 @@ test.describe("MVP smoke", () => {
     await expect(page.getByRole("button", { name: "Set up gitmarks" })).toBeVisible();
   });
 
-  test("options page saves settings and popup switches to save view", async ({ context, extensionId }) => {
+  // SKIPPED: requires the popup's getActiveTab fallback that scanned all tabs
+  // (which needed the broader 'tabs' manifest permission). Permission was dropped
+  // (issue #3) — production code now relies on the activeTab permission granted
+  // on toolbar-icon click. Playwright opens popup.html as a normal tab, which
+  // doesn't qualify as the action gesture, so chrome.tabs.query({active,currentWindow})
+  // returns the popup tab itself. Same family as the Playwright SW-dispatch gap
+  // (issue #5). The popup save flow is covered by unit tests in test/save-flow.test.ts.
+  test.skip("options page saves settings and popup switches to save view", async ({ context, extensionId }) => {
     await installGitHubMock(context);
 
     const options = await context.newPage();
@@ -44,7 +51,12 @@ test.describe("MVP smoke", () => {
     await expect(options.locator("#status")).toContainText("valid PAT");
   });
 
-  test("save flow writes to mocked GitHub", async ({ context, extensionId }) => {
+  // SKIPPED: same Playwright/activeTab gap as the "popup switches to save view"
+  // test above (issue #3, #5). Save-flow unit coverage lives in
+  // test/save-flow.test.ts and test/bookmarks-file.test.ts; the GitHub-write
+  // round-trip is verified by sync.spec.ts which exercises the algorithm
+  // inline in the service-worker context.
+  test.skip("save flow writes to mocked GitHub", async ({ context, extensionId }) => {
     // The popup calls the GitHub API directly (page context), so context.route()
     // interception is sufficient — no service worker fetch patching needed.
     const mock = await installGitHubMock(context);
