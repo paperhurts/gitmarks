@@ -161,19 +161,20 @@ src/
 ## Automated tests
 
 ```bash
-# Unit tests (vitest, jsdom + chrome.* stub)
-pnpm --filter @gitmarks/extension-chrome test
+# Unit tests live in the shared package (vitest, jsdom + browser.* stub)
+pnpm --filter @gitmarks/extension-shared test
 
-# Browser e2e (Playwright + real Chromium with extension loaded)
+# Browser e2e (Playwright + real Chromium with extension loaded) is Chrome-only
 pnpm --filter @gitmarks/extension-chrome e2e
 
-# Type checking
+# Type checking — both packages
+pnpm --filter @gitmarks/extension-shared typecheck
 pnpm --filter @gitmarks/extension-chrome typecheck
 ```
 
 **Coverage:**
 
-Unit tests (97) cover the pure logic — settings, machine ID, bookmark
+Unit tests (96) cover the pure logic — settings, machine ID, bookmark
 factory, save flow, folder path conversion, ID mapping, suppression
 registry (URL + node ID), apply-remote, reconciliation, the listener
 batch/debounce/flush algorithm, and the background-core poll/reconcile
