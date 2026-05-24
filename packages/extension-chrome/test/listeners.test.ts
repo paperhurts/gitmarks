@@ -214,6 +214,48 @@ describe("listeners", () => {
     expect(captured!.bookmarks[0]!.title).toBe("New title");
   });
 
+  it("create + update on the same nodeId within one batch lands with the updated title (issue #19)", async () => {
+    // User creates a bookmark and then immediately renames it within the
+    // 500ms debounce window. Both events land in the same flush batch.
+    // Pre-fix: the update event saw idMap.ulidForNode == null (the create's
+    // mapping isn't applied until after the write succeeds) and the surviving
+    // filter dropped the update entirely. Result: the file written to GitHub
+    // had the ORIGINAL title.
+    // Fix: surviving filter accepts updates whose nodeId has a create in the
+    // same batch; applyBatch's update branch consults createUlids when idMap
+    // returns null.
+    let captured: BookmarksFile | null = null;
+    const update = vi.fn(async (_p: string, mutate: any) => {
+      captured = mutate({ version: 1, updated_at: "x", bookmarks: [] });
+      return { data: captured, sha: "s", etag: "" };
+    });
+    const client = fakeClient({ update });
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => IdMap.load(),
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const changeListener = (chrome.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+
+    createListener("node-1", {
+      id: "node-1",
+      parentId: BAR,
+      title: "Original",
+      url: "https://example.com/",
+    });
+    changeListener("node-1", { title: "Renamed" });
+
+    await flushPending();
+
+    expect(captured).not.toBeNull();
+    expect(captured!.bookmarks.length).toBe(1);
+    expect(captured!.bookmarks[0]!.title).toBe("Renamed");
+  });
+
   it("onChanged with no URL is suppressed when nodeId is in the node-suppression registry (title-only echo from apply-remote)", async () => {
     // Issue #18 finding A: apply-remote's chrome.bookmarks.update({title})
     // fires onChanged with changeInfo.url === undefined. URL-suppression
