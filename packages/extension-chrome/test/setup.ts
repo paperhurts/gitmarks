@@ -43,6 +43,7 @@ const chromeStub = {
     update: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
     move: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
     remove: vi.fn(async () => {}),
+    get: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
     getTree: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
     getSubTree: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
     onCreated: { addListener: vi.fn(), removeListener: vi.fn() },

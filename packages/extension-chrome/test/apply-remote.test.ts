@@ -44,6 +44,69 @@ describe("applyRemoteChanges", () => {
     expect(isSuppressed("https://example.com/new")).toBe(true);
   });
 
+  it("propagates a remote title change to the local node (issue #1)", async () => {
+    const bm = bookmark({
+      id: "u1",
+      url: "https://example.com/",
+      title: "New title from another device",
+    });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
+
+    // Current local node has the old title
+    (chrome.bookmarks.get as any).mockResolvedValueOnce([
+      { id: "node-1", parentId: BAR, title: "Old title", url: "https://example.com/" },
+    ]);
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    expect(chrome.bookmarks.update).toHaveBeenCalledWith("node-1", {
+      title: "New title from another device",
+    });
+    // The URL is unchanged, but we still suppress to avoid an onChanged echo
+    expect(isSuppressed("https://example.com/")).toBe(true);
+  });
+
+  it("propagates a remote URL change to the local node (issue #1)", async () => {
+    const bm = bookmark({
+      id: "u1",
+      url: "https://example.com/new-path",
+      title: "Same title",
+    });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
+
+    (chrome.bookmarks.get as any).mockResolvedValueOnce([
+      { id: "node-1", parentId: BAR, title: "Same title", url: "https://example.com/old-path" },
+    ]);
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    expect(chrome.bookmarks.update).toHaveBeenCalledWith("node-1", {
+      url: "https://example.com/new-path",
+    });
+    // Suppress both old and new URL — the onChanged echo will fire with the new URL
+    expect(isSuppressed("https://example.com/new-path")).toBe(true);
+  });
+
+  it("skips the update call when remote matches local (no spurious onChanged)", async () => {
+    const bm = bookmark({
+      id: "u1",
+      url: "https://example.com/",
+      title: "Same",
+    });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
+
+    (chrome.bookmarks.get as any).mockResolvedValueOnce([
+      { id: "node-1", parentId: BAR, title: "Same", url: "https://example.com/" },
+    ]);
+
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+
+    expect(chrome.bookmarks.update).not.toHaveBeenCalled();
+  });
+
   it("does not create a bookmark already mapped", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/" });
     const idMap = await IdMap.load();
