@@ -1,21 +1,31 @@
 import { useMemo, useState } from "react";
-import type { GitHubClient } from "@gitmarks/core";
+import type { BookmarksFile, GitHubClient } from "@gitmarks/core";
 import { useGitmarksData } from "../hooks/useGitmarksData.js";
+import { useSelection } from "../hooks/useSelection.js";
 import { BookmarkList } from "../components/BookmarkList.js";
+import { BulkActionsBar } from "../components/BulkActionsBar.js";
 import { SearchBar } from "../components/SearchBar.js";
 import { TagFilter } from "../components/TagFilter.js";
 import { Layout, type LayoutStatus } from "../components/Layout.js";
 import { allUsedTags, searchBookmarks, visibleBookmarks } from "../lib/data.js";
+import {
+  bulkAddTag,
+  bulkRemoveTag,
+  bulkSetFolder,
+  bulkSoftDelete,
+} from "../lib/bulk-mutations.js";
 
 interface Props {
   client: GitHubClient;
 }
 
 export function ListPage({ client }: Props) {
-  const { bookmarksFile, tagsFile, loading, error, refresh } = useGitmarksData(client);
+  const { bookmarksFile, tagsFile, loading, error, refresh, writeBookmarks } = useGitmarksData(client);
+  const selection = useSelection();
   const [query, setQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [writeError, setWriteError] = useState<string | null>(null);
 
   const visible = useMemo(
     () => (bookmarksFile != null ? visibleBookmarks(bookmarksFile) : []),
@@ -33,9 +43,11 @@ export function ListPage({ client }: Props) {
 
   const status: LayoutStatus = loading
     ? { kind: "loading", message: "loading…" }
-    : error != null
-      ? { kind: "err", message: error }
-      : { kind: "ok", message: `${visible.length} bookmarks` };
+    : writeError != null
+      ? { kind: "err", message: writeError }
+      : error != null
+        ? { kind: "err", message: error }
+        : { kind: "ok", message: `${visible.length} bookmarks` };
 
   const filteredFile = bookmarksFile != null
     ? { ...bookmarksFile, bookmarks: searched }
@@ -47,6 +59,23 @@ export function ListPage({ client }: Props) {
       await refresh();
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  function ids(): string[] {
+    return [...selection.selected];
+  }
+
+  async function runBulk(
+    message: string,
+    mutator: (f: BookmarksFile) => BookmarksFile,
+  ) {
+    setWriteError(null);
+    try {
+      await writeBookmarks(mutator, message);
+      selection.clear();
+    } catch (err) {
+      setWriteError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -66,9 +95,34 @@ export function ListPage({ client }: Props) {
         </aside>
         <section>
           <SearchBar value={query} onChange={setQuery} />
+          {selection.selected.size > 0 && tagsFile != null && (
+            <BulkActionsBar
+              count={selection.selected.size}
+              tagsFile={tagsFile}
+              onAddTag={(tag) =>
+                runBulk(`bulk: add tag ${tag}`, bulkAddTag(ids(), tag, new Date().toISOString()))
+              }
+              onRemoveTag={(tag) =>
+                runBulk(`bulk: remove tag ${tag}`, bulkRemoveTag(ids(), tag, new Date().toISOString()))
+              }
+              onSetFolder={(folder) =>
+                runBulk(`bulk: set folder ${folder}`, bulkSetFolder(ids(), folder, new Date().toISOString()))
+              }
+              onDelete={() =>
+                runBulk(`bulk: move ${ids().length} to trash`, bulkSoftDelete(ids(), new Date().toISOString()))
+              }
+              onClear={() => selection.clear()}
+            />
+          )}
           {filteredFile != null && tagsFile != null && (
             <div className="mt-4">
-              <BookmarkList bookmarksFile={filteredFile} tagsFile={tagsFile} />
+              <BookmarkList
+                bookmarksFile={filteredFile}
+                tagsFile={tagsFile}
+                selected={selection.selected}
+                onToggleSelect={selection.toggle}
+                onSetAll={(idsList) => selection.setAll(idsList)}
+              />
             </div>
           )}
         </section>
