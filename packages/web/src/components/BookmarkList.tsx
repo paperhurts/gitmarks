@@ -42,7 +42,7 @@ export function BookmarkList({
               }
             }}
           />
-          <span>{selected?.size ?? 0} selected</span>
+          <span>{selected?.size ?? 0} of {items.length}</span>
         </div>
       )}
       <ul className="divide-y divide-fog">
