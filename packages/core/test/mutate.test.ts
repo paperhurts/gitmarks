@@ -5,6 +5,8 @@ import {
   updateBookmark,
   softDeleteBookmark,
   gcTombstones,
+  restoreBookmark,
+  updateBookmarks,
 } from "../src/mutate.js";
 
 function mkBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
@@ -105,5 +107,64 @@ describe("gcTombstones", () => {
     const file = mkFile([live]);
     const out = gcTombstones(file, 30, "2026-05-23T00:00:00Z");
     expect(out.bookmarks).toEqual([live]);
+  });
+});
+
+describe("updateBookmarks (bulk)", () => {
+  it("applies a patch to every listed id and stamps updated_at", () => {
+    const file = mkFile([
+      mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA" }),
+      mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CB" }),
+      mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CC" }),
+    ]);
+    const next = updateBookmarks(
+      file,
+      [
+        { id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA", patch: { folder: "Archive" } },
+        { id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CC", patch: { tags: ["x"] } },
+      ],
+      "2026-05-25T00:00:00Z",
+    );
+    expect(next.bookmarks[0]!.folder).toBe("Archive");
+    expect(next.bookmarks[0]!.updated_at).toBe("2026-05-25T00:00:00Z");
+    expect(next.bookmarks[1]!.folder).toBe(file.bookmarks[1]!.folder);
+    expect(next.bookmarks[2]!.tags).toEqual(["x"]);
+    expect(next.updated_at).toBe("2026-05-25T00:00:00Z");
+  });
+
+  it("throws when any id is missing", () => {
+    const file = mkFile([mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA" })]);
+    expect(() =>
+      updateBookmarks(file, [{ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CZ", patch: {} }], "2026-05-25T00:00:00Z"),
+    ).toThrow(/not found/);
+  });
+
+  it("no-ops on empty patch list but stamps updated_at", () => {
+    const file = mkFile([mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA" })]);
+    const next = updateBookmarks(file, [], "2026-05-25T00:00:00Z");
+    expect(next.updated_at).toBe("2026-05-25T00:00:00Z");
+    expect(next.bookmarks).toEqual(file.bookmarks);
+  });
+
+  it("does not mutate the input", () => {
+    const file = mkFile([mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA", folder: "" })]);
+    updateBookmarks(file, [{ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA", patch: { folder: "X" } }], "2026-05-25T00:00:00Z");
+    expect(file.bookmarks[0]!.folder).toBe("");
+  });
+});
+
+describe("restoreBookmark", () => {
+  it("clears deleted_at and updates updated_at", () => {
+    const file = mkFile([
+      mkBookmark({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA", deleted_at: "2026-04-01T00:00:00Z" }),
+    ]);
+    const next = restoreBookmark(file, "01HXYZ8K7M9P3RQ2V5W6Z8B0CA", "2026-05-25T00:00:00Z");
+    expect(next.bookmarks[0]!.deleted_at).toBeNull();
+    expect(next.bookmarks[0]!.updated_at).toBe("2026-05-25T00:00:00Z");
+  });
+
+  it("throws when the id is missing", () => {
+    const file = mkFile([]);
+    expect(() => restoreBookmark(file, "01HXYZ8K7M9P3RQ2V5W6Z8B0CZ", "2026-05-25T00:00:00Z")).toThrow(/not found/);
   });
 });
