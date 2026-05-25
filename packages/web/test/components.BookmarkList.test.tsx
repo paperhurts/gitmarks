@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { BookmarksFile, TagsFile } from "@gitmarks/core";
 import { BookmarkList } from "../src/components/BookmarkList.js";
 
@@ -63,5 +64,41 @@ describe("BookmarkList", () => {
     const empty: BookmarksFile = { version: 1, updated_at: "now", bookmarks: [] };
     render(<BookmarkList bookmarksFile={empty} tagsFile={tags} />);
     expect(screen.getByText(/no bookmarks yet/i)).toBeInTheDocument();
+  });
+
+  it("renders a checkbox per row when onToggleSelect is provided", () => {
+    const onToggleSelect = vi.fn();
+    render(
+      <BookmarkList
+        bookmarksFile={bookmarks}
+        tagsFile={tags}
+        selected={new Set()}
+        onToggleSelect={onToggleSelect}
+      />,
+    );
+    const checkboxes = screen.getAllByRole("checkbox");
+    // 1 row checkbox + 1 select-all = 2
+    expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("calls onToggleSelect with the bookmark id when its checkbox is clicked", async () => {
+    const user = userEvent.setup();
+    const onToggleSelect = vi.fn();
+    render(
+      <BookmarkList
+        bookmarksFile={bookmarks}
+        tagsFile={tags}
+        selected={new Set()}
+        onToggleSelect={onToggleSelect}
+      />,
+    );
+    const rowCheckbox = screen.getByLabelText(/select hacker news/i);
+    await user.click(rowCheckbox);
+    expect(onToggleSelect).toHaveBeenCalledWith("01HXYZ8K7M9P3RQ2V5W6Z8B0CA");
+  });
+
+  it("renders no checkboxes when onToggleSelect is not provided", () => {
+    render(<BookmarkList bookmarksFile={bookmarks} tagsFile={tags} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 });
