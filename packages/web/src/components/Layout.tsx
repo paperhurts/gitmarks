@@ -42,6 +42,14 @@ export function Layout({ children, status, onRefresh, onExport, refreshing }: Pr
           >
             Tags
           </NavLink>
+          <NavLink
+            to="/trash"
+            className={({ isActive }) =>
+              `${navLinkBase} ${isActive ? navLinkActive : navLinkInactive}`
+            }
+          >
+            Trash
+          </NavLink>
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm">
           <StatusPill status={status} />

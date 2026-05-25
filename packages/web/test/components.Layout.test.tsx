@@ -24,10 +24,11 @@ describe("Layout", () => {
     expect(screen.getByTestId("outlet")).toBeInTheDocument();
   });
 
-  it("renders nav links for List and Tags", () => {
+  it("renders nav links for List, Tags, and Trash", () => {
     rendered();
     expect(screen.getByRole("link", { name: /list/i })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /tags/i })).toHaveAttribute("href", "/tags");
+    expect(screen.getByRole("link", { name: /trash/i })).toHaveAttribute("href", "/trash");
   });
 
   it("shows the status pill", () => {

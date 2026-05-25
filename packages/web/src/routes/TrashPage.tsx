@@ -4,6 +4,8 @@ import { Layout, type LayoutStatus } from "../components/Layout.js";
 import { TrashList } from "../components/TrashList.js";
 import { useGitmarksData } from "../hooks/useGitmarksData.js";
 import { bulkRestore } from "../lib/bulk-mutations.js";
+import { toNetscapeHtml } from "../lib/netscape-export.js";
+import { downloadString } from "../lib/download.js";
 
 interface Props {
   client: GitHubClient;
@@ -31,6 +33,11 @@ export function TrashPage({ client }: Props) {
     }
   }
 
+  function onExport() {
+    if (bookmarksFile == null) return;
+    downloadString(toNetscapeHtml(bookmarksFile), "gitmarks.html", "text/html");
+  }
+
   async function onRestore(id: string) {
     setWriteError(null);
     try {
@@ -42,7 +49,7 @@ export function TrashPage({ client }: Props) {
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} refreshing={refreshing}>
       <div data-testid="trash-page" className="p-4">
         <h1 className="text-magenta text-2xl mb-4">Trash</h1>
         <p className="text-cyan-soft/60 text-xs mb-4">
