@@ -3,8 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { RequireSettings } from "../src/App.js";
 import { SetupPage } from "../src/routes/SetupPage.js";
-import { ListPage } from "../src/routes/ListPage.js";
-import { TagsPage } from "../src/routes/TagsPage.js";
 import { saveSettings } from "../src/lib/settings.js";
 
 function AppRoutes({ initialPath = "/" }: { initialPath?: string }) {
@@ -13,8 +11,8 @@ function AppRoutes({ initialPath = "/" }: { initialPath?: string }) {
       <Routes>
         <Route path="/setup" element={<SetupPage />} />
         <Route element={<RequireSettings />}>
-          <Route path="/" element={<ListPage />} />
-          <Route path="/tags" element={<TagsPage />} />
+          <Route path="/" element={<div data-testid="list-page">list</div>} />
+          <Route path="/tags" element={<div data-testid="tags-page">tags</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
