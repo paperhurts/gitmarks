@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { Layout } from "../src/components/Layout.js";
 
@@ -32,5 +33,24 @@ describe("Layout", () => {
   it("shows the status pill", () => {
     rendered();
     expect(screen.getByText(/synced 12s ago/i)).toBeInTheDocument();
+  });
+
+  it("renders an Export button when onExport is provided and invokes it", async () => {
+    const onExport = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Layout
+          status={{ kind: "ok", message: "synced" }}
+          onRefresh={() => {}}
+          onExport={onExport}
+          refreshing={false}
+        >
+          <div />
+        </Layout>
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("button", { name: /export/i }));
+    expect(onExport).toHaveBeenCalled();
   });
 });

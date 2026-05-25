@@ -11,6 +11,7 @@ interface Props {
   children: ReactNode;
   status: LayoutStatus;
   onRefresh: () => void;
+  onExport?: () => void;
   refreshing: boolean;
 }
 
@@ -18,7 +19,7 @@ const navLinkBase = "px-3 py-1 rounded";
 const navLinkActive = "bg-fog text-cyan";
 const navLinkInactive = "text-cyan-soft hover:text-cyan";
 
-export function Layout({ children, status, onRefresh, refreshing }: Props) {
+export function Layout({ children, status, onRefresh, onExport, refreshing }: Props) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-fog px-4 py-3 flex items-center gap-4">
@@ -44,6 +45,15 @@ export function Layout({ children, status, onRefresh, refreshing }: Props) {
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm">
           <StatusPill status={status} />
+          {onExport !== undefined && (
+            <button
+              type="button"
+              onClick={onExport}
+              className="px-3 py-1 rounded border border-fog text-cyan-soft hover:border-cyan"
+            >
+              Export
+            </button>
+          )}
           <button
             type="button"
             onClick={onRefresh}
