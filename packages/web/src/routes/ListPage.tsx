@@ -14,6 +14,8 @@ import {
   bulkSetFolder,
   bulkSoftDelete,
 } from "../lib/bulk-mutations.js";
+import { toNetscapeHtml } from "../lib/netscape-export.js";
+import { downloadString } from "../lib/download.js";
 
 interface Props {
   client: GitHubClient;
@@ -62,6 +64,11 @@ export function ListPage({ client }: Props) {
     }
   }
 
+  function onExport() {
+    if (bookmarksFile == null) return;
+    downloadString(toNetscapeHtml(bookmarksFile), "gitmarks.html", "text/html");
+  }
+
   function ids(): string[] {
     return [...selection.selected];
   }
@@ -80,7 +87,7 @@ export function ListPage({ client }: Props) {
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} refreshing={refreshing}>
       <div data-testid="list-page" className="grid grid-cols-[12rem_1fr] gap-4 p-4">
         <aside className="border-r border-fog pr-4">
           <h2 className="text-magenta text-sm uppercase mb-2">Tags</h2>
