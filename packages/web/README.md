@@ -15,6 +15,7 @@ The dev server runs at `http://localhost:5173/`. Hash routes:
 - `#/setup` — PAT + owner + repo + branch entry, with a Validate step
 - `#/` — list page (search + tag filter sidebar)
 - `#/tags` — tag manager (rename, recolor, add, delete)
+- `#/trash` — soft-deleted bookmarks within the 30-day GC window, with restore
 
 On first load with no settings stored, the router redirects to `#/setup`.
 
@@ -45,11 +46,29 @@ After running `pnpm --filter @gitmarks/web dev`:
 - [ ] Open `#/tags`. Rename a tag, change its color, add a new tag, delete
       a tag. Each action commits to `tags.json` immediately. Refresh the
       page and confirm the changes persisted.
+- [ ] Select multiple rows via their checkboxes → the BulkActionsBar appears with
+      the count + add-tag/remove-tag/set-folder/move-to-trash/clear actions.
+- [ ] Add a tag via the bar → all selected rows show the new tag. One commit
+      lands on `bookmarks.json`.
+- [ ] Move several rows to trash → they disappear from the list, the BulkActionsBar
+      clears, and the entries get `deleted_at` set on GitHub.
+- [ ] Open `#/trash` → the moved rows are listed. Click **Restore** on one →
+      it disappears from trash and reappears in the list. One commit lands.
+- [ ] Click **Export** in the header → a file `gitmarks.html` downloads. Open
+      it in another browser's bookmark-import → the bookmarks appear, folders
+      nested correctly. Tombstones are not exported.
 
-## Scope (v1)
+## Scope (v1 + v2)
 
-Read-side only. Bookmark creation, editing, bulk operations, trash view, and
-Netscape HTML export are tracked separately as [#25 Web UI v2](https://github.com/paperhurts/gitmarks/issues/25).
+Read + write side. Bookmark creation still happens via the extension (per
+spec); the web UI does NOT create bookmarks.
+
+Web UI scope, today:
+- List + search + tag filter
+- Tag manager (rename / recolor / add / delete)
+- Multi-select + bulk operations (add tag, remove tag, set folder, move to trash)
+- Trash view with restore
+- Netscape HTML export
 
 ## Architecture
 
