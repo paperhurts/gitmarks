@@ -36,6 +36,7 @@ the roadmap. See `spec.md` for the full design.
 | `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 96 unit tests live here. |
 | `@gitmarks/extension-chrome` | Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e. Thin entry files import from `extension-shared`. |
 | `@gitmarks/extension-firefox` | Firefox MV3 shell. Manifest + plain Vite build. Same source as Chrome via `extension-shared`. Load via `about:debugging`. |
+| `@gitmarks/web` | Static SPA — list, search, tag management. Vite + React + Tailwind. Talks directly to GitHub via `@gitmarks/core`. Deploys to GitHub Pages or Cloudflare Pages. |
 
 ## Quick start (Chrome extension)
 
@@ -91,7 +92,7 @@ The repo is a pnpm workspace monorepo. Each package has its own
 ## Architecture
 
 ```
-[Chrome ext] [Firefox ext] [Safari ext (planned)]    [Web UI (planned)]
+[Chrome ext] [Firefox ext] [Safari ext (planned)]    [Web UI]
        \             |                       /                       /
         \            |                      /                       /
          v           v                     v                       v
@@ -126,7 +127,7 @@ The load-bearing invariants:
 - ✅ Chrome native tree integration — listeners, reconcile, poll loop
 - ✅ Tracking-param stripping (opt-in)
 - ✅ Firefox MV3 add-on ([#23](https://github.com/paperhurts/gitmarks/issues/23))
-- ⬜ Web UI v1: list + search + tag management ([#24](https://github.com/paperhurts/gitmarks/issues/24))
+- ✅ Web UI v1: list + search + tag management ([#24](https://github.com/paperhurts/gitmarks/issues/24))
 - ⬜ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
 - ⬜ Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26))
 

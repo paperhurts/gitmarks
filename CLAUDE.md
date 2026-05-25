@@ -9,8 +9,9 @@ Two packages are merged to main and working:
 - `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 96 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+ for MV3 SW parity. Load via `about:debugging` → "Load Temporary Add-on".
+- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. Read-side web UI: list, search, tag management. Talks directly to GitHub via `@gitmarks/core`. Routes via hash (`#/setup`, `#/`, `#/tags`).
 
-Pending packages (in dependency order): Firefox build, web UI (read + search + tags), web UI (write + bulk ops), Safari.
+Pending packages (in dependency order): web UI (write + bulk ops), Safari.
 
 `spec.md` remains the source of truth for design decisions that aren't visible in the code.
 
@@ -101,7 +102,7 @@ pnpm --filter @gitmarks/extension-chrome e2e
 2. ✅ Chrome MVP (toolbar save)
 3. ✅ Chrome native tree integration
 4. ✅ Firefox MV3 add-on (`webextension-polyfill` + extension-shared) — issue [#23](https://github.com/paperhurts/gitmarks/issues/23)
-5. ⬜ Web UI v1: list / search / tag management — issue [#24](https://github.com/paperhurts/gitmarks/issues/24)
+5. ✅ Web UI v1: list / search / tag management — issue [#24](https://github.com/paperhurts/gitmarks/issues/24)
 6. ⬜ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
 7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
 
