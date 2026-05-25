@@ -10,6 +10,9 @@ import { SetupPage } from "./routes/SetupPage.js";
 import { ListPage } from "./routes/ListPage.js";
 import { TagsPage } from "./routes/TagsPage.js";
 
+// Exported for tests, which compose <RequireSettings/> under a MemoryRouter to
+// sidestep a Node 24 / undici / jsdom AbortSignal incompatibility that breaks
+// createHashRouter under test. Production wiring is in App() below.
 export function RequireSettings() {
   const settings = loadSettings();
   if (settings == null) return <Navigate to="/setup" replace />;
