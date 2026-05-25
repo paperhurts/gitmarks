@@ -9,8 +9,9 @@ you control.
 **Status:** Chrome extension is functional end-to-end (save via toolbar
 button, two-way sync with the native bookmark tree, 5-min poll for remote
 changes, automatic conflict retry). Firefox MV3 add-on shipping the same
-source as Chrome via a shared package. Safari / web UI are next in
-the roadmap. See `spec.md` for the full design.
+source as Chrome via a shared package. Web UI v1 (read-side: list, search,
+tag management) deploys as a static SPA. Web UI v2 (bulk ops + trash +
+export) and Safari are next in the roadmap. See `spec.md` for the full design.
 
 ## Features (Chrome, today)
 
@@ -25,7 +26,7 @@ the roadmap. See `spec.md` for the full design.
   on the next 5-minute poll
 - Concurrent edits from multiple devices reconcile automatically via
   GitHub's file SHA + optimistic retry-replay
-- 162 automated tests (unit + Playwright e2e against real Chromium)
+- 228 automated unit + component tests + 6 Playwright e2e (against real Chromium)
 - Optional **tracking-param stripping** (utm_*, fbclid, gclid, etc.) at save time — opt-in via settings
 
 ## Packages
