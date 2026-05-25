@@ -20,7 +20,10 @@ export { normalizeUrl } from "./url.js";
 export {
   addBookmark,
   updateBookmark,
+  updateBookmarks,
+  type BookmarkPatch,
   softDeleteBookmark,
+  restoreBookmark,
   gcTombstones,
 } from "./mutate.js";
 
