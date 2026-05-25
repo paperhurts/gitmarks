@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { TagsFile } from "@gitmarks/core";
 import { TagManager } from "../src/components/TagManager.js";
@@ -36,12 +36,9 @@ describe("TagManager", () => {
 
   it("calls onMutate with a color mutator when the color input changes", async () => {
     const onMutate = vi.fn().mockResolvedValue(undefined);
-    const user = userEvent.setup();
     render(<TagManager tagsFile={tagsFile} onMutate={onMutate} />);
     const colorInput = screen.getByLabelText(/color for daily/i) as HTMLInputElement;
-    await user.click(colorInput);
-    colorInput.value = "#123456";
-    colorInput.dispatchEvent(new Event("change", { bubbles: true }));
+    fireEvent.change(colorInput, { target: { value: "#123456" } });
     expect(onMutate).toHaveBeenCalled();
     const mutator = onMutate.mock.calls[0]![0];
     expect(mutator(tagsFile).tags["daily"]?.color).toBe("#123456");

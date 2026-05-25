@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { TagsFile } from "@gitmarks/core";
 import { addTag, deleteTag, renameTag, setTagColor } from "../lib/tag-mutations.js";
 
@@ -83,30 +83,13 @@ interface RowProps {
 
 function TagRow({ name, color, onRename, onColor, onDelete }: RowProps) {
   const [draft, setDraft] = useState(name);
-  const colorRef = useRef<HTMLInputElement>(null);
-  const onColorRef = useRef(onColor);
-  onColorRef.current = onColor;
-
-  // Attach a native change listener so that direct `.value` assignment + dispatchEvent
-  // works in tests without relying on React's value-change tracking (which skips onChange
-  // when `.value` is set programmatically before dispatch).
-  useEffect(() => {
-    const el = colorRef.current;
-    if (!el) return;
-    function handleChange() {
-      void onColorRef.current(el!.value);
-    }
-    el.addEventListener("change", handleChange);
-    return () => { el.removeEventListener("change", handleChange); };
-  }, []);
-
   return (
     <li className="flex items-center gap-2">
       <input
-        ref={colorRef}
         type="color"
         aria-label={`color for ${name}`}
-        defaultValue={color}
+        value={color}
+        onChange={(e) => { void onColor(e.target.value); }}
         className="w-8 h-8 bg-transparent border border-fog rounded cursor-pointer"
       />
       <input
