@@ -1,7 +1,9 @@
+import { SetupForm } from "../components/SetupForm.js";
+
 export function SetupPage() {
   return (
-    <section data-testid="setup-page">
-      <h1 className="text-magenta text-2xl">Set up gitmarks</h1>
-    </section>
+    <main data-testid="setup-page" className="min-h-screen">
+      <SetupForm />
+    </main>
   );
 }
