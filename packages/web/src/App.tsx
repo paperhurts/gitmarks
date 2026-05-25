@@ -12,6 +12,7 @@ import type { GitHubClient } from "@gitmarks/core";
 import { SetupPage } from "./routes/SetupPage.js";
 import { ListPage } from "./routes/ListPage.js";
 import { TagsPage } from "./routes/TagsPage.js";
+import { TrashPage } from "./routes/TrashPage.js";
 
 interface AppContext {
   settings: Settings;
@@ -49,6 +50,11 @@ function TagsPageWithContext() {
   return <TagsPage client={client} />;
 }
 
+function TrashPageWithContext() {
+  const { client } = useAppContext();
+  return <TrashPage client={client} />;
+}
+
 export function App() {
   const router = useMemo(
     () =>
@@ -59,6 +65,7 @@ export function App() {
           children: [
             { path: "/", element: <ListPageWithContext /> },
             { path: "/tags", element: <TagsPageWithContext /> },
+            { path: "/trash", element: <TrashPageWithContext /> },
           ],
         },
       ]),

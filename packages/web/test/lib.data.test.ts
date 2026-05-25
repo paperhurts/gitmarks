@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Bookmark, BookmarksFile } from "@gitmarks/core";
-import { searchBookmarks, visibleBookmarks, allUsedTags } from "../src/lib/data.js";
+import { searchBookmarks, visibleBookmarks, allUsedTags, deletedBookmarks } from "../src/lib/data.js";
 
 function mk(over: Partial<Bookmark> = {}): Bookmark {
   return {
@@ -74,5 +74,27 @@ describe("allUsedTags", () => {
 
   it("returns an empty set when no bookmarks have tags", () => {
     expect(allUsedTags([])).toEqual(new Set());
+  });
+});
+
+describe("deletedBookmarks", () => {
+  const fileWithDeletes: BookmarksFile = {
+    version: 1,
+    updated_at: "2026-05-25T00:00:00Z",
+    bookmarks: [
+      mk({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA", deleted_at: null }),
+      mk({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CB", deleted_at: "2026-05-20T00:00:00Z" }),
+      mk({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CC", deleted_at: "2026-03-01T00:00:00Z" }),
+    ],
+  };
+
+  it("returns deleted bookmarks within the GC window", () => {
+    const got = deletedBookmarks(fileWithDeletes, "2026-05-25T00:00:00Z", 30);
+    expect(got.map((b) => b.id)).toEqual(["01HXYZ8K7M9P3RQ2V5W6Z8B0CB"]);
+  });
+
+  it("returns empty when all deletes are past the GC window", () => {
+    const got = deletedBookmarks(fileWithDeletes, "2027-01-01T00:00:00Z", 30);
+    expect(got).toEqual([]);
   });
 });
