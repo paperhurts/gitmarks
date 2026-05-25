@@ -30,6 +30,10 @@ export interface UseGitmarksData {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  writeBookmarks: (
+    mutate: (f: BookmarksFile) => BookmarksFile,
+    message: string,
+  ) => Promise<void>;
   writeTags: (
     mutate: (f: TagsFile) => TagsFile,
     message: string,
@@ -84,6 +88,15 @@ export function useGitmarksData(client: GitHubClient): UseGitmarksData {
     }
   }, [bookmarks, tags, client, loadInitial]);
 
+  const writeBookmarks = useCallback(
+    async (mutate: (f: BookmarksFile) => BookmarksFile, message: string) => {
+      const result = await client.update<BookmarksFile>("bookmarks.json", mutate, message);
+      if (!mounted.current) return;
+      setBookmarks({ data: result.data, etag: result.etag, sha: result.sha });
+    },
+    [client],
+  );
+
   const writeTags = useCallback(
     async (mutate: (f: TagsFile) => TagsFile, message: string) => {
       const result = await client.update<TagsFile>("tags.json", mutate, message);
@@ -107,6 +120,7 @@ export function useGitmarksData(client: GitHubClient): UseGitmarksData {
     loading,
     error,
     refresh,
+    writeBookmarks,
     writeTags,
   };
 }

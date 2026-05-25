@@ -80,6 +80,26 @@ describe("useGitmarksData", () => {
     expect(update).toHaveBeenCalledWith("tags.json", mutator, "test commit");
   });
 
+  it("writeBookmarks() calls client.update on bookmarks.json with the mutator", async () => {
+    const updatedFile: BookmarksFile = {
+      version: 1,
+      updated_at: "2026-05-25T00:00:00Z",
+      bookmarks: [],
+    };
+    const update = vi.fn().mockResolvedValue({ data: updatedFile, sha: "b2", etag: '"b2"' });
+    const client = fakeClient({ update } as any);
+    const { result } = renderHook(() => useGitmarksData(client));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const mutator = (f: BookmarksFile) => f;
+    await act(async () => {
+      await result.current.writeBookmarks(mutator, "bulk: move to trash");
+    });
+
+    expect(update).toHaveBeenCalledWith("bookmarks.json", mutator, "bulk: move to trash");
+    expect(result.current.bookmarksFile).toEqual(updatedFile);
+  });
+
   it("sets error when initial read throws", async () => {
     const client = fakeClient({
       read: vi.fn().mockRejectedValue(new Error("boom")),
