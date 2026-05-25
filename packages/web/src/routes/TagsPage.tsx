@@ -3,13 +3,15 @@ import type { GitHubClient, TagsFile } from "@gitmarks/core";
 import { TagManager } from "../components/TagManager.js";
 import { Layout, type LayoutStatus } from "../components/Layout.js";
 import { useGitmarksData } from "../hooks/useGitmarksData.js";
+import { toNetscapeHtml } from "../lib/netscape-export.js";
+import { downloadString } from "../lib/download.js";
 
 interface Props {
   client: GitHubClient;
 }
 
 export function TagsPage({ client }: Props) {
-  const { tagsFile, loading, error, refresh, writeTags } = useGitmarksData(client);
+  const { bookmarksFile, tagsFile, loading, error, refresh, writeTags } = useGitmarksData(client);
   const [refreshing, setRefreshing] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
 
@@ -32,6 +34,11 @@ export function TagsPage({ client }: Props) {
     }
   }
 
+  function onExport() {
+    if (bookmarksFile == null) return;
+    downloadString(toNetscapeHtml(bookmarksFile), "gitmarks.html", "text/html");
+  }
+
   async function onMutate(mutator: (f: TagsFile) => TagsFile) {
     setWriteError(null);
     try {
@@ -42,7 +49,7 @@ export function TagsPage({ client }: Props) {
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} refreshing={refreshing}>
       <div data-testid="tags-page">
         {tagsFile != null && <TagManager tagsFile={tagsFile} onMutate={onMutate} />}
       </div>
