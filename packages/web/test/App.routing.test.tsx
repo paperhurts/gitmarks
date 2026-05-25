@@ -1,17 +1,34 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { App } from "../src/App.js";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { RequireSettings } from "../src/App.js";
+import { SetupPage } from "../src/routes/SetupPage.js";
+import { ListPage } from "../src/routes/ListPage.js";
+import { TagsPage } from "../src/routes/TagsPage.js";
 import { saveSettings } from "../src/lib/settings.js";
+
+function AppRoutes({ initialPath = "/" }: { initialPath?: string }) {
+  return (
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Routes>
+        <Route path="/setup" element={<SetupPage />} />
+        <Route element={<RequireSettings />}>
+          <Route path="/" element={<ListPage />} />
+          <Route path="/tags" element={<TagsPage />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  );
+}
 
 describe("App routing", () => {
   beforeEach(() => {
     localStorage.clear();
-    window.location.hash = "";
   });
 
-  it("redirects to /setup when no settings are stored", () => {
-    render(<App />);
-    expect(screen.getByRole("heading", { name: /set up gitmarks/i })).toBeInTheDocument();
+  it("redirects to /setup when no settings are stored", async () => {
+    render(<AppRoutes />);
+    expect(await screen.findByRole("heading", { name: /set up gitmarks/i })).toBeInTheDocument();
   });
 
   it("renders the list page when settings are present", () => {
@@ -21,19 +38,18 @@ describe("App routing", () => {
       repo: "bookmarks",
       branch: "main",
     });
-    render(<App />);
+    render(<AppRoutes />);
     expect(screen.getByTestId("list-page")).toBeInTheDocument();
   });
 
-  it("navigates to /tags via the nav link", async () => {
+  it("navigates to /tags via the nav link", () => {
     saveSettings({
       token: "ghp_fake",
       owner: "paperhurts",
       repo: "bookmarks",
       branch: "main",
     });
-    window.location.hash = "#/tags";
-    render(<App />);
+    render(<AppRoutes initialPath="/tags" />);
     expect(screen.getByTestId("tags-page")).toBeInTheDocument();
   });
 });
