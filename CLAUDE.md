@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Two packages are merged to main and working:
+Five packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers, example fixtures. 65 unit tests.
 - `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 96 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+ for MV3 SW parity. Load via `about:debugging` → "Load Temporary Add-on".
-- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. Read-side web UI: list, search, tag management. Talks directly to GitHub via `@gitmarks/core`. Routes via hash (`#/setup`, `#/`, `#/tags`).
+- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. Read-side web UI: list, search, tag management. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`). 67 unit + component tests.
 
-Pending packages (in dependency order): web UI (write + bulk ops), Safari.
+Total: 228 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
+
+Pending packages (in dependency order): web UI v2 (write + bulk ops), Safari.
 
 `spec.md` remains the source of truth for design decisions that aren't visible in the code.
 
@@ -73,6 +75,21 @@ Each is a thin browser-specific shell over `@gitmarks/extension-shared`:
 - Own entry files that side-effect-import from `@gitmarks/extension-shared/{background,popup,options}`
 - Own HTML files (duplicated across shells because Vite needs them as build inputs — known follow-up)
 - Chrome owns the Playwright e2e suite; Firefox relies on the manual smoke test in its README
+
+### `@gitmarks/web` (`packages/web/`)
+
+Vite + React 18 + Tailwind 3 SPA. Read-side: list, search, tag management. Hash routing (`createHashRouter`) so it deploys at any path on GitHub Pages or Cloudflare Pages. Cyan/magenta on dark per `spec.md`.
+
+- **Settings** (`src/lib/settings.ts`): Zod-validated `localStorage` wrapper for `{token, owner, repo, branch}`. Same PAT model as the extensions.
+- **Client wrapper** (`src/lib/client.ts`): `makeClient(settings, fetch?)` builds a `GitHubClient`; `validateConnection` returns a discriminated `ValidateResult` (`ok-with-files` | `ok-no-files` | `auth-failed` | `repo-not-found` | `network-error`).
+- **Data hook** (`src/hooks/useGitmarksData.ts`): loads `bookmarks.json` + `tags.json` on mount; tracks ETags and uses `readIfChanged` on `refresh()`. Seeds empty files on 404 so freshly-set-up users see the empty state, not an error. `writeTags(mutator, message)` delegates to `client.update("tags.json", …)` for 409 retry-replay.
+- **Pure helpers** (`src/lib/data.ts`, `src/lib/tag-mutations.ts`): `visibleBookmarks` (filters tombstones), `searchBookmarks` (case-insensitive substring across title/url/tags/notes), `allUsedTags`, plus `addTag`/`renameTag`/`setTagColor`/`deleteTag`. All pure so they can be replayed inside `client.update`.
+- **Routes** (`src/routes/`): `SetupPage` (PAT entry + Validate + Save), `ListPage` (search + tag-filter sidebar + BookmarkList), `TagsPage` (TagManager wired to `writeTags`).
+- **Layout** (`src/components/Layout.tsx`): header, nav, status pill (loading/ok/warn/err), Sync-from-GitHub button.
+
+**Tag rename is decoupled from bookmark refs by design** — `renameTag` only mutates `tags.json`. Bookmark `tags[]` entries still reference the old name until updated by the extension's save path. Per `spec.md` §"`tags.json`": "Separate file so renaming a tag doesn't churn every bookmark."
+
+**Test compromise worth knowing:** routing tests use `MemoryRouter + Routes/Route` rather than the production `createHashRouter` to sidestep a Node 24 / undici / jsdom AbortSignal incompatibility (`createHashRouter` triggers `new Request()` whose AbortSignal jsdom doesn't recognize). `RequireSettings` is exported from `App.tsx` for this purpose; the test setup file has a narrow `unhandledRejection` filter for the same root cause. Production wiring uses the real hash router and is verified by the manual smoke test in `packages/web/README.md`.
 
 ## Testing
 
