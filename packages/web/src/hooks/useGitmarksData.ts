@@ -1,5 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GitHubNotFoundError } from "@gitmarks/core";
 import type { BookmarksFile, GitHubClient, TagsFile } from "@gitmarks/core";
+
+const EMPTY_BOOKMARKS: BookmarksFile = { version: 1, updated_at: "", bookmarks: [] };
+const EMPTY_TAGS: TagsFile = { version: 1, tags: {} };
+
+async function readOrEmpty<T>(
+  client: GitHubClient,
+  path: string,
+  empty: T,
+): Promise<{ data: T; etag: string; sha: string }> {
+  try {
+    return await client.read<T>(path);
+  } catch (err) {
+    if (err instanceof GitHubNotFoundError) return { data: empty, etag: "", sha: "" };
+    throw err;
+  }
+}
 
 interface Loaded<T> {
   data: T;
@@ -30,14 +47,16 @@ export function useGitmarksData(client: GitHubClient): UseGitmarksData {
     setLoading(true);
     setError(null);
     try {
+      // 404 on either file is treated as empty — a freshly-set-up repo may not
+      // have bookmarks.json yet (extension creates it on first save) or tags.json
+      // (created on first tag-manager mutation). All other errors propagate.
       const [b, t] = await Promise.all([
-        client.read<BookmarksFile>("bookmarks.json"),
-        client.read<TagsFile>("tags.json").catch(() => null),
+        readOrEmpty<BookmarksFile>(client, "bookmarks.json", EMPTY_BOOKMARKS),
+        readOrEmpty<TagsFile>(client, "tags.json", EMPTY_TAGS),
       ]);
       if (!mounted.current) return;
       setBookmarks({ data: b.data, etag: b.etag, sha: b.sha });
-      if (t != null) setTags({ data: t.data, etag: t.etag, sha: t.sha });
-      else setTags({ data: { version: 1, tags: {} }, etag: "", sha: "" });
+      setTags({ data: t.data, etag: t.etag, sha: t.sha });
     } catch (err) {
       if (!mounted.current) return;
       setError(err instanceof Error ? err.message : String(err));

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import type { BookmarksFile, TagsFile } from "@gitmarks/core";
+import { GitHubNotFoundError } from "@gitmarks/core";
 import { useGitmarksData } from "../src/hooks/useGitmarksData.js";
 import type { GitHubClient } from "@gitmarks/core";
 
@@ -87,5 +88,20 @@ describe("useGitmarksData", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toMatch(/boom/);
     expect(result.current.bookmarksFile).toBeNull();
+  });
+
+  it("seeds an empty BookmarksFile when bookmarks.json 404s on first load", async () => {
+    const client = fakeClient({
+      read: vi.fn().mockImplementation(async (path: string) => {
+        if (path === "bookmarks.json") throw new GitHubNotFoundError(path);
+        if (path === "tags.json") return { data: tagsFile, sha: "t1", etag: '"t"' };
+        throw new Error("unexpected path");
+      }),
+    } as any);
+    const { result } = renderHook(() => useGitmarksData(client));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBeNull();
+    expect(result.current.bookmarksFile).toEqual({ version: 1, updated_at: "", bookmarks: [] });
+    expect(result.current.tagsFile).toEqual(tagsFile);
   });
 });
