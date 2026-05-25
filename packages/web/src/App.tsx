@@ -1,5 +1,6 @@
 import {
   createHashRouter,
+  Navigate,
   Outlet,
   RouterProvider,
 } from "react-router-dom";
@@ -9,9 +10,9 @@ import { SetupPage } from "./routes/SetupPage.js";
 import { ListPage } from "./routes/ListPage.js";
 import { TagsPage } from "./routes/TagsPage.js";
 
-function RequireSettings() {
+export function RequireSettings() {
   const settings = loadSettings();
-  if (settings == null) return <SetupPage />;
+  if (settings == null) return <Navigate to="/setup" replace />;
   return <Outlet />;
 }
 
