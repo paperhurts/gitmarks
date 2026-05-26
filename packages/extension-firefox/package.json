@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node ./scripts/copy-html.mjs",
+    "dev": "vite",
+    "prebuild": "node ./scripts/copy-html.mjs",
     "build": "vite build && node ./scripts/copy-manifest.mjs",
+    "pretypecheck": "node ./scripts/copy-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

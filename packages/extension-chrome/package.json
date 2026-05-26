@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "predev": "node ./scripts/copy-html.mjs",
     "dev": "vite build --watch --mode development",
+    "prebuild": "node ./scripts/copy-html.mjs",
+    "build": "vite build",
+    "pretypecheck": "node ./scripts/copy-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest:e2e": "node ./scripts/copy-html.mjs && vite build",
     "e2e": "playwright test",
-    "e2e:headed": "playwright test --headed",
-    "pretest:e2e": "vite build"
+    "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@gitmarks/core": "workspace:*",
