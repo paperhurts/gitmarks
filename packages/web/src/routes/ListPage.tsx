@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { BookmarksFile, GitHubClient } from "@gitmarks/core";
 import { useGitmarksData } from "../hooks/useGitmarksData.js";
 import { useSelection } from "../hooks/useSelection.js";
@@ -16,6 +17,7 @@ import {
 } from "../lib/bulk-mutations.js";
 import { toNetscapeHtml } from "../lib/netscape-export.js";
 import { downloadString } from "../lib/download.js";
+import { clearSettings } from "../lib/settings.js";
 
 interface Props {
   client: GitHubClient;
@@ -24,6 +26,7 @@ interface Props {
 export function ListPage({ client }: Props) {
   const { bookmarksFile, tagsFile, loading, error, refresh, writeBookmarks } = useGitmarksData(client);
   const selection = useSelection();
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,6 +72,11 @@ export function ListPage({ client }: Props) {
     downloadString(toNetscapeHtml(bookmarksFile), "gitmarks.html", "text/html");
   }
 
+  function onSignOut() {
+    clearSettings();
+    navigate("/setup");
+  }
+
   function ids(): string[] {
     return [...selection.selected];
   }
@@ -87,7 +95,7 @@ export function ListPage({ client }: Props) {
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} onExport={onExport} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing}>
       <div data-testid="list-page" className="grid grid-cols-[12rem_1fr] gap-4 p-4">
         <aside className="border-r border-fog pr-4">
           <h2 className="text-magenta text-sm uppercase mb-2">Tags</h2>

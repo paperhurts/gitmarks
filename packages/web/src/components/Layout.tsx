@@ -12,6 +12,7 @@ interface Props {
   status: LayoutStatus;
   onRefresh: () => void;
   onExport?: () => void;
+  onSignOut?: () => void;
   refreshing: boolean;
 }
 
@@ -19,7 +20,7 @@ const navLinkBase = "px-3 py-1 rounded";
 const navLinkActive = "bg-fog text-cyan";
 const navLinkInactive = "text-cyan-soft hover:text-cyan";
 
-export function Layout({ children, status, onRefresh, onExport, refreshing }: Props) {
+export function Layout({ children, status, onRefresh, onExport, onSignOut, refreshing }: Props) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-fog px-4 py-3 flex items-center gap-4">
@@ -60,6 +61,15 @@ export function Layout({ children, status, onRefresh, onExport, refreshing }: Pr
               className="px-3 py-1 rounded border border-fog text-cyan-soft hover:border-cyan"
             >
               Export
+            </button>
+          )}
+          {onSignOut !== undefined && (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="px-3 py-1 rounded border border-magenta text-magenta hover:bg-magenta hover:text-ink"
+            >
+              Sign out
             </button>
           )}
           <button
