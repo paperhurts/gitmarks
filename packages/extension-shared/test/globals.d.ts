@@ -1,10 +1,10 @@
 /**
- * Declares the `chrome` global used by test stubs, typed via webextension-polyfill.
- * Replaces the ambient `chrome` global that was previously supplied by @types/chrome.
+ * Declares the `browser` global used by test stubs, typed via webextension-polyfill.
+ * test/setup.ts installs this via vi.stubGlobal("browser", chromeStub).
  */
 import type Browser from "webextension-polyfill";
 
 declare global {
   // eslint-disable-next-line no-var
-  var chrome: typeof Browser;
+  var browser: typeof Browser;
 }
