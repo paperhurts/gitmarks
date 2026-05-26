@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import type { Bookmarks } from "webextension-polyfill";
-import type { BookmarksFile } from "@gitmarks/core";
+import { type BookmarksFile, isSafeBookmarkUrl } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
 import { suppress, suppressNode } from "./suppression.js";
@@ -39,6 +39,13 @@ export async function applyRemoteChanges(
         continue;
       }
 
+      if (!isSafeBookmarkUrl(bm.url)) {
+        console.warn("[gitmarks] skipping remote bookmark with unsafe URL scheme", {
+          ulid: bm.id, url: bm.url,
+        });
+        continue;
+      }
+
       if (existingNode != null) {
         // Remote bookmark already in the local tree — propagate title/url
         // changes so users on Device A see edits from Device B within the
@@ -73,6 +80,12 @@ async function applyRemoteEdit(
   remoteUrl: string,
   remoteTitle: string,
 ): Promise<void> {
+  if (!isSafeBookmarkUrl(remoteUrl)) {
+    console.warn("[gitmarks] skipping remote edit with unsafe URL scheme", {
+      nodeId, url: remoteUrl,
+    });
+    return;
+  }
   let current: Bookmarks.BookmarkTreeNode | undefined;
   try {
     const found = await browser.bookmarks.get(nodeId);
