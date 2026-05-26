@@ -91,4 +91,26 @@ describe("buildBookmark", () => {
     });
     expect(a.id).not.toBe(b.id);
   });
+
+  it("throws when given a javascript: URL", () => {
+    expect(() =>
+      buildBookmark({
+        url: "javascript:alert(1)",
+        title: "Evil",
+        machineId: "ABCDE12F",
+        nowIso: "2026-05-23T14:32:11Z",
+      }),
+    ).toThrow(/unsafe URL scheme/i);
+  });
+
+  it("throws when given a data: URL", () => {
+    expect(() =>
+      buildBookmark({
+        url: "data:text/html,<script>alert(1)</script>",
+        title: "Evil",
+        machineId: "ABCDE12F",
+        nowIso: "2026-05-23T14:32:11Z",
+      }),
+    ).toThrow(/unsafe URL scheme/i);
+  });
 });

@@ -1,4 +1,5 @@
 import type { Bookmark, TagsFile } from "@gitmarks/core";
+import { isSafeBookmarkUrl } from "@gitmarks/core";
 import { TagChip } from "./TagChip.js";
 
 interface Props {
@@ -24,14 +25,23 @@ export function BookmarkRow({ bookmark, tagsFile, selected, onToggleSelect }: Pr
       )}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-3">
-          <a
-            href={bookmark.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-cyan hover:text-magenta truncate flex-1"
-          >
-            {bookmark.title}
-          </a>
+          {isSafeBookmarkUrl(bookmark.url) ? (
+            <a
+              href={bookmark.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-cyan hover:text-magenta truncate flex-1"
+            >
+              {bookmark.title}
+            </a>
+          ) : (
+            <span
+              title="unsafe URL scheme — not clickable"
+              className="text-magenta truncate flex-1 italic"
+            >
+              {bookmark.title}
+            </span>
+          )}
           <span className="text-xs text-cyan-soft/60">{folder}</span>
         </div>
         <div className="text-xs text-cyan-soft/40 truncate mt-1">{bookmark.url}</div>

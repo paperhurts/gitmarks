@@ -101,4 +101,58 @@ describe("BookmarkList", () => {
     render(<BookmarkList bookmarksFile={bookmarks} tagsFile={tags} />);
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
+
+  it("renders a plain span (not an anchor) for unsafe URL schemes", () => {
+    const danger: BookmarksFile = {
+      version: 1,
+      updated_at: "2026-05-25T00:00:00Z",
+      bookmarks: [
+        {
+          id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA",
+          url: "javascript:alert(1)",
+          title: "Click me",
+          folder: "",
+          tags: [],
+          added_at: "2026-05-01T00:00:00Z",
+          updated_at: "2026-05-01T00:00:00Z",
+          added_from: "chrome@minerva",
+          deleted_at: null,
+          notes: null,
+        },
+      ],
+    };
+    render(<BookmarkList bookmarksFile={danger} tagsFile={tags} />);
+    expect(screen.queryByRole("link", { name: /click me/i })).not.toBeInTheDocument();
+    expect(screen.getByText("Click me")).toBeInTheDocument();
+  });
+
+  it("falls back to the default color when the tag color is malformed", () => {
+    const malformedTags: TagsFile = {
+      version: 1,
+      tags: { weird: { color: "red; background: url(x)", description: null } },
+    };
+    const bm: BookmarksFile = {
+      version: 1,
+      updated_at: "2026-05-25T00:00:00Z",
+      bookmarks: [
+        {
+          id: "01HXYZ8K7M9P3RQ2V5W6Z8B0CA",
+          url: "https://example.com/",
+          title: "Tagged",
+          folder: "",
+          tags: ["weird"],
+          added_at: "2026-05-01T00:00:00Z",
+          updated_at: "2026-05-01T00:00:00Z",
+          added_from: "chrome@minerva",
+          deleted_at: null,
+          notes: null,
+        },
+      ],
+    };
+    render(<BookmarkList bookmarksFile={bm} tagsFile={malformedTags} />);
+    const chip = screen.getByText("weird");
+    // Inline style should reference the fallback #475569, not the attacker payload
+    expect(chip).toHaveAttribute("style");
+    expect(chip.getAttribute("style") ?? "").not.toContain("url(");
+  });
 });
