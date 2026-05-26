@@ -10,8 +10,9 @@
     "build": "vite build",
     "pretypecheck": "node ./scripts/copy-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "pretest:e2e": "node ./scripts/copy-html.mjs && vite build",
+    "pree2e": "node ./scripts/copy-html.mjs && vite build",
     "e2e": "playwright test",
+    "pree2e:headed": "node ./scripts/copy-html.mjs && vite build",
     "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
