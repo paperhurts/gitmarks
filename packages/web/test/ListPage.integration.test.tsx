@@ -76,4 +76,40 @@ describe("ListPage integration", () => {
     await user.click(chip);
     expect(screen.getByText("Tailwind")).toBeInTheDocument();
   });
+
+  it("shows the bulk actions bar after selecting a row", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ListPage client={fakeClient()} />
+      </MemoryRouter>,
+    );
+    await screen.findByText("Hacker News");
+    await user.click(screen.getByLabelText(/select hacker news/i));
+    expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /move to trash/i })).toBeInTheDocument();
+  });
+
+  it("calls client.update on bookmarks.json when Move to trash is clicked", async () => {
+    const update = vi.fn().mockResolvedValue({ data: bookmarksFile, sha: "b2", etag: '"b2"' });
+    const client = {
+      read: vi.fn().mockImplementation(async (path: string) => {
+        if (path === "bookmarks.json") return { data: bookmarksFile, sha: "b", etag: '"b"' };
+        if (path === "tags.json") return { data: tagsFile, sha: "t", etag: '"t"' };
+        throw new Error("unexpected");
+      }),
+      readIfChanged: vi.fn().mockResolvedValue(null),
+      update,
+    } as any;
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ListPage client={client} />
+      </MemoryRouter>,
+    );
+    await screen.findByText("Hacker News");
+    await user.click(screen.getByLabelText(/select hacker news/i));
+    await user.click(screen.getByRole("button", { name: /move to trash/i }));
+    expect(update).toHaveBeenCalledWith("bookmarks.json", expect.any(Function), expect.stringContaining("trash"));
+  });
 });

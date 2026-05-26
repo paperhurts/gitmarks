@@ -26,7 +26,7 @@ export) and Safari are next in the roadmap. See `spec.md` for the full design.
   on the next 5-minute poll
 - Concurrent edits from multiple devices reconcile automatically via
   GitHub's file SHA + optimistic retry-replay
-- 228 automated unit + component tests + 6 Playwright e2e (against real Chromium)
+- 272 automated unit + component tests + 6 Playwright e2e (against real Chromium)
 - Optional **tracking-param stripping** (utm_*, fbclid, gclid, etc.) at save time — opt-in via settings
 
 ## Packages
@@ -129,7 +129,7 @@ The load-bearing invariants:
 - ✅ Tracking-param stripping (opt-in)
 - ✅ Firefox MV3 add-on ([#23](https://github.com/paperhurts/gitmarks/issues/23))
 - ✅ Web UI v1: list + search + tag management ([#24](https://github.com/paperhurts/gitmarks/issues/24))
-- ⬜ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
+- ✅ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
 - ⬜ Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26))
 
 ## Files in this repo
