@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-
+    "types": ["webextension-polyfill"],
     "rootDir": "./",
     "outDir": "./dist-tsc",
     "noEmit": true
