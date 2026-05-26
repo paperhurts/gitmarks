@@ -72,6 +72,16 @@ the manual smoke test checklist, and architecture notes.
 - **No telemetry.** The extension only talks to `api.github.com`. That's
   enforced by the MV3 manifest's `host_permissions`.
 
+### PAT lifecycle / revocation
+
+When you stop using gitmarks (uninstall the extension, clear browser data, or switch machines):
+
+1. **Revoke the PAT on github.com.** Settings → Developer settings → Personal access tokens → Fine-grained tokens → find the one named for your bookmarks repo → **Delete**. This is the only authoritative way to invalidate the credential.
+2. **Web UI:** click **Sign out** in the header. This clears `localStorage` on your current machine. (It does NOT revoke the token on GitHub — see step 1.)
+3. **Extension:** uninstalling the extension removes its `chrome.storage.local` entry on that machine. The token on GitHub remains valid until you revoke it.
+
+Treat the PAT like a saved password. If a machine is lost or compromised, revoke immediately on github.com.
+
 ## Development
 
 ```bash
