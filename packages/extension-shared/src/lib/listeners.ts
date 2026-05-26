@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import type { Bookmarks } from "webextension-polyfill";
 import type {
   Bookmark,
   BookmarksFile,
@@ -104,7 +105,7 @@ async function runFlush(): Promise<void> {
   }
 }
 
-function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
+function onCreated(_id: string, node: Bookmarks.BookmarkTreeNode): void {
   if (node.url == null || node.url.length === 0) return;
   pending.push({
     kind: "create",
@@ -115,7 +116,7 @@ function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
   schedule();
 }
 
-function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo): void {
+function onChanged(id: string, changeInfo: Bookmarks.OnChangedChangeInfoType): void {
   const url = changeInfo.url;
   const title = changeInfo.title;
   if (url === undefined && title === undefined) return;
@@ -129,11 +130,11 @@ function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo):
   schedule();
 }
 
-function onMoved(_id: string, _moveInfo: chrome.bookmarks.BookmarkMoveInfo): void {
+function onMoved(_id: string, _moveInfo: Bookmarks.OnMovedMoveInfoType): void {
   // Folder moves are intentionally not pushed from the listener; the periodic reconcile catches folder drift.
 }
 
-function onRemoved(id: string, removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
+function onRemoved(id: string, removeInfo: Bookmarks.OnRemovedRemoveInfoType): void {
   // Only sync bookmarks (URL-bearing nodes), not folders.
   if (removeInfo.node.url == null || removeInfo.node.url.length === 0) return;
   pending.push({ kind: "remove", nodeId: id, url: removeInfo.node.url });

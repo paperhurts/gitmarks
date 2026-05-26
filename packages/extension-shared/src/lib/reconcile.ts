@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import type { Bookmarks } from "webextension-polyfill";
 import type {
   BookmarksFile,
   Bookmark,
@@ -121,7 +122,7 @@ async function collectLocalBookmarks(
 }
 
 function walk(
-  node: chrome.bookmarks.BookmarkTreeNode,
+  node: Bookmarks.BookmarkTreeNode,
   out: Map<string, LocalEntry>,
 ): void {
   if (node.url != null && node.url.length > 0) {
