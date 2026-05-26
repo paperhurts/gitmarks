@@ -1,27 +1,50 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { GitHubNotFoundError } from "@gitmarks/core";
+import {
+  GitHubNotFoundError,
+  bookmarksFileSchema,
+  tagsFileSchema,
+} from "@gitmarks/core";
 import type { BookmarksFile, GitHubClient, TagsFile } from "@gitmarks/core";
 
 const EMPTY_BOOKMARKS: BookmarksFile = { version: 1, updated_at: "", bookmarks: [] };
 const EMPTY_TAGS: TagsFile = { version: 1, tags: {} };
 
-async function readOrEmpty<T>(
-  client: GitHubClient,
-  path: string,
-  empty: T,
-): Promise<{ data: T; etag: string; sha: string }> {
-  try {
-    return await client.read<T>(path);
-  } catch (err) {
-    if (err instanceof GitHubNotFoundError) return { data: empty, etag: "", sha: "" };
-    throw err;
-  }
-}
-
 interface Loaded<T> {
   data: T;
   etag: string;
   sha: string;
+}
+
+async function readBookmarksOrEmpty(client: GitHubClient): Promise<Loaded<BookmarksFile>> {
+  try {
+    const result = await client.read<unknown>("bookmarks.json");
+    const parsed = bookmarksFileSchema.safeParse(result.data);
+    if (!parsed.success) {
+      throw new Error(
+        `bookmarks.json failed schema validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+      );
+    }
+    return { data: parsed.data, etag: result.etag, sha: result.sha };
+  } catch (err) {
+    if (err instanceof GitHubNotFoundError) return { data: EMPTY_BOOKMARKS, etag: "", sha: "" };
+    throw err;
+  }
+}
+
+async function readTagsOrEmpty(client: GitHubClient): Promise<Loaded<TagsFile>> {
+  try {
+    const result = await client.read<unknown>("tags.json");
+    const parsed = tagsFileSchema.safeParse(result.data);
+    if (!parsed.success) {
+      throw new Error(
+        `tags.json failed schema validation: ${parsed.error.issues[0]?.message ?? "unknown"}`,
+      );
+    }
+    return { data: parsed.data, etag: result.etag, sha: result.sha };
+  } catch (err) {
+    if (err instanceof GitHubNotFoundError) return { data: EMPTY_TAGS, etag: "", sha: "" };
+    throw err;
+  }
 }
 
 export interface UseGitmarksData {
@@ -53,10 +76,11 @@ export function useGitmarksData(client: GitHubClient): UseGitmarksData {
     try {
       // 404 on either file is treated as empty — a freshly-set-up repo may not
       // have bookmarks.json yet (extension creates it on first save) or tags.json
-      // (created on first tag-manager mutation). All other errors propagate.
+      // (created on first tag-manager mutation). Schema failures and all other
+      // errors propagate to the catch block and surface as an error message.
       const [b, t] = await Promise.all([
-        readOrEmpty<BookmarksFile>(client, "bookmarks.json", EMPTY_BOOKMARKS),
-        readOrEmpty<TagsFile>(client, "tags.json", EMPTY_TAGS),
+        readBookmarksOrEmpty(client),
+        readTagsOrEmpty(client),
       ]);
       if (!mounted.current) return;
       setBookmarks({ data: b.data, etag: b.etag, sha: b.sha });
