@@ -9,11 +9,11 @@ Five packages are merged to main and working:
 - `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 96 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+ for MV3 SW parity. Load via `about:debugging` → "Load Temporary Add-on".
-- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. Read-side web UI: list, search, tag management. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`). 67 unit + component tests.
+- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 105 unit + component tests.
 
-Total: 228 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
+Total: 272 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
 
-Pending packages (in dependency order): web UI v2 (write + bulk ops), Safari.
+Pending packages (in dependency order): Safari.
 
 `spec.md` remains the source of truth for design decisions that aren't visible in the code.
 
@@ -83,9 +83,12 @@ Vite + React 18 + Tailwind 3 SPA. Read-side: list, search, tag management. Hash 
 - **Settings** (`src/lib/settings.ts`): Zod-validated `localStorage` wrapper for `{token, owner, repo, branch}`. Same PAT model as the extensions.
 - **Client wrapper** (`src/lib/client.ts`): `makeClient(settings, fetch?)` builds a `GitHubClient`; `validateConnection` returns a discriminated `ValidateResult` (`ok-with-files` | `ok-no-files` | `auth-failed` | `repo-not-found` | `network-error`).
 - **Data hook** (`src/hooks/useGitmarksData.ts`): loads `bookmarks.json` + `tags.json` on mount; tracks ETags and uses `readIfChanged` on `refresh()`. Seeds empty files on 404 so freshly-set-up users see the empty state, not an error. `writeTags(mutator, message)` delegates to `client.update("tags.json", …)` for 409 retry-replay.
-- **Pure helpers** (`src/lib/data.ts`, `src/lib/tag-mutations.ts`): `visibleBookmarks` (filters tombstones), `searchBookmarks` (case-insensitive substring across title/url/tags/notes), `allUsedTags`, plus `addTag`/`renameTag`/`setTagColor`/`deleteTag`. All pure so they can be replayed inside `client.update`.
-- **Routes** (`src/routes/`): `SetupPage` (PAT entry + Validate + Save), `ListPage` (search + tag-filter sidebar + BookmarkList), `TagsPage` (TagManager wired to `writeTags`).
-- **Layout** (`src/components/Layout.tsx`): header, nav, status pill (loading/ok/warn/err), Sync-from-GitHub button.
+- **Pure helpers** (`src/lib/data.ts`, `src/lib/tag-mutations.ts`): `visibleBookmarks` (filters tombstones), `deletedBookmarks` (returns soft-deleted within GC window), `searchBookmarks` (case-insensitive substring across title/url/tags/notes), `allUsedTags`, plus `addTag`/`renameTag`/`setTagColor`/`deleteTag`. All pure so they can be replayed inside `client.update`.
+- **Routes** (`src/routes/`): `SetupPage` (PAT entry + Validate + Save), `ListPage` (search + tag-filter sidebar + BookmarkList), `TagsPage` (TagManager wired to `writeTags`), `TrashPage` (deleted bookmarks with restore).
+- **Layout** (`src/components/Layout.tsx`): header, nav, status pill (loading/ok/warn/err), Sync-from-GitHub button, Export button.
+- **Bulk operations** (`src/lib/bulk-mutations.ts`, `src/components/BulkActionsBar.tsx`, `src/hooks/useSelection.ts`): multi-select state; bulk add tag / remove tag / set folder / soft-delete; each fires one `client.update` call per action.
+- **Trash** (`src/routes/TrashPage.tsx`, `src/components/TrashList.tsx`): filters `deleted_at != null` within the 30-day GC window; restore clears `deleted_at` via `bulkRestore`.
+- **Export** (`src/lib/netscape-export.ts`, `src/lib/download.ts`): generates Netscape Bookmark File Format and triggers a browser download via Blob.
 
 **Tag rename is decoupled from bookmark refs by design** — `renameTag` only mutates `tags.json`. Bookmark `tags[]` entries still reference the old name until updated by the extension's save path. Per `spec.md` §"`tags.json`": "Separate file so renaming a tag doesn't churn every bookmark."
 
@@ -120,10 +123,10 @@ pnpm --filter @gitmarks/extension-chrome e2e
 3. ✅ Chrome native tree integration
 4. ✅ Firefox MV3 add-on (`webextension-polyfill` + extension-shared) — issue [#23](https://github.com/paperhurts/gitmarks/issues/23)
 5. ✅ Web UI v1: list / search / tag management — issue [#24](https://github.com/paperhurts/gitmarks/issues/24)
-6. ⬜ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
+6. ✅ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
 7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
 
-For next-piece-of-work: pick one of #23–#26. Each has a scope block in its issue description. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
+For next-piece-of-work: pick from the remaining open issues (#26 Safari). Each has a scope block in its issue description. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
 
 ## Non-goals (do not implement)
 

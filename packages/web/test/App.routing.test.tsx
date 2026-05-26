@@ -13,6 +13,7 @@ function AppRoutes({ initialPath = "/" }: { initialPath?: string }) {
         <Route element={<RequireSettings />}>
           <Route path="/" element={<div data-testid="list-page">list</div>} />
           <Route path="/tags" element={<div data-testid="tags-page">tags</div>} />
+          <Route path="/trash" element={<div data-testid="trash-page">trash</div>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -49,5 +50,16 @@ describe("App routing", () => {
     });
     render(<AppRoutes initialPath="/tags" />);
     expect(screen.getByTestId("tags-page")).toBeInTheDocument();
+  });
+
+  it("renders the trash page at /trash", async () => {
+    saveSettings({
+      token: "ghp_fake",
+      owner: "paperhurts",
+      repo: "bookmarks",
+      branch: "main",
+    });
+    render(<AppRoutes initialPath="/trash" />);
+    expect(await screen.findByTestId("trash-page")).toBeInTheDocument();
   });
 });

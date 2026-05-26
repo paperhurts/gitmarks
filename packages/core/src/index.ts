@@ -14,13 +14,16 @@ export {
 
 // Primitives
 export { newUlid } from "./ulid.js";
-export { normalizeUrl } from "./url.js";
+export { normalizeUrl, isSafeBookmarkUrl } from "./url.js";
 
 // Pure mutations
 export {
   addBookmark,
   updateBookmark,
+  updateBookmarks,
+  type BookmarkPatch,
   softDeleteBookmark,
+  restoreBookmark,
   gcTombstones,
 } from "./mutate.js";
 
