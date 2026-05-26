@@ -1,3 +1,31 @@
+// Schemes a browser opens in a tab as a regular navigation. Anything outside
+// this allowlist (javascript:, data:, vbscript:, etc.) is rejected at save time
+// and rendered as plain text (no clickable anchor) at render time. Defense in
+// depth against a malicious bookmarks.json commit; an attacker who lands a
+// javascript: URL would otherwise execute in the origin holding the PAT.
+const SAFE_URL_SCHEMES = new Set([
+  "http:",
+  "https:",
+  "mailto:",
+  "ftp:",
+  "ftps:",
+  "chrome:",
+  "about:",
+  "moz-extension:",
+  "chrome-extension:",
+  "view-source:",
+]);
+
+export function isSafeBookmarkUrl(input: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return false;
+  }
+  return SAFE_URL_SCHEMES.has(parsed.protocol);
+}
+
 // Well-known tracking parameter names. Compared case-insensitively.
 // Sources: utm_* (Google Analytics), fbclid (Facebook), gclid (Google Ads),
 // msclkid (Microsoft Ads), mc_cid/mc_eid (Mailchimp).

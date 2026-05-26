@@ -14,7 +14,7 @@ export {
 
 // Primitives
 export { newUlid } from "./ulid.js";
-export { normalizeUrl } from "./url.js";
+export { normalizeUrl, isSafeBookmarkUrl } from "./url.js";
 
 // Pure mutations
 export {
