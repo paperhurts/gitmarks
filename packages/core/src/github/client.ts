@@ -68,7 +68,9 @@ export class GitHubClient {
 
   private contentsUrl(path: string): string {
     const enc = path.split("/").map(encodeURIComponent).join("/");
-    return `${this.baseUrl}/repos/${this.owner}/${this.repo}/contents/${enc}?ref=${encodeURIComponent(this.branch)}`;
+    const o = encodeURIComponent(this.owner);
+    const r = encodeURIComponent(this.repo);
+    return `${this.baseUrl}/repos/${o}/${r}/contents/${enc}?ref=${encodeURIComponent(this.branch)}`;
   }
 
   private throwForStatus(res: Response, path: string): void {
