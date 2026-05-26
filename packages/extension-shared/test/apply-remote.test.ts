@@ -36,7 +36,7 @@ describe("applyRemoteChanges", () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/new" });
     const idMap = await IdMap.load();
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
-    expect(chrome.bookmarks.create).toHaveBeenCalledWith({
+    expect(browser.bookmarks.create).toHaveBeenCalledWith({
       parentId: BAR,
       title: "Example",
       url: "https://example.com/new",
@@ -54,13 +54,13 @@ describe("applyRemoteChanges", () => {
     idMap.set(asUlid("u1"), asNodeId("node-1"));
 
     // Current local node has the old title
-    (chrome.bookmarks.get as any).mockResolvedValueOnce([
+    (browser.bookmarks.get as any).mockResolvedValueOnce([
       { id: "node-1", parentId: BAR, title: "Old title", url: "https://example.com/" },
     ]);
 
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
 
-    expect(chrome.bookmarks.update).toHaveBeenCalledWith("node-1", {
+    expect(browser.bookmarks.update).toHaveBeenCalledWith("node-1", {
       title: "New title from another device",
     });
     // The URL is unchanged, but we still suppress to avoid an onChanged echo
@@ -76,13 +76,13 @@ describe("applyRemoteChanges", () => {
     const idMap = await IdMap.load();
     idMap.set(asUlid("u1"), asNodeId("node-1"));
 
-    (chrome.bookmarks.get as any).mockResolvedValueOnce([
+    (browser.bookmarks.get as any).mockResolvedValueOnce([
       { id: "node-1", parentId: BAR, title: "Same title", url: "https://example.com/old-path" },
     ]);
 
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
 
-    expect(chrome.bookmarks.update).toHaveBeenCalledWith("node-1", {
+    expect(browser.bookmarks.update).toHaveBeenCalledWith("node-1", {
       url: "https://example.com/new-path",
     });
     // Suppress BOTH the new URL (carried in the onChanged echo) AND the old
@@ -91,27 +91,27 @@ describe("applyRemoteChanges", () => {
     expect(isSuppressed("https://example.com/old-path")).toBe(true);
   });
 
-  it("silently skips a mapped-but-locally-deleted node (chrome.bookmarks.get throws 'not found')", async () => {
+  it("silently skips a mapped-but-locally-deleted node (browser.bookmarks.get throws 'not found')", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/", title: "Doesn't matter" });
     const idMap = await IdMap.load();
     idMap.set(asUlid("u1"), asNodeId("node-gone"));
 
-    (chrome.bookmarks.get as any).mockRejectedValueOnce(
+    (browser.bookmarks.get as any).mockRejectedValueOnce(
       new Error("Can't find bookmark for id."),
     );
 
     // Should not throw; should not invoke update
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
 
-    expect(chrome.bookmarks.update).not.toHaveBeenCalled();
+    expect(browser.bookmarks.update).not.toHaveBeenCalled();
   });
 
-  it("rethrows non-'not found' errors from chrome.bookmarks.get", async () => {
+  it("rethrows non-'not found' errors from browser.bookmarks.get", async () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/", title: "Doesn't matter" });
     const idMap = await IdMap.load();
     idMap.set(asUlid("u1"), asNodeId("node-1"));
 
-    (chrome.bookmarks.get as any).mockRejectedValueOnce(
+    (browser.bookmarks.get as any).mockRejectedValueOnce(
       new Error("Extension context invalidated."),
     );
 
@@ -129,13 +129,13 @@ describe("applyRemoteChanges", () => {
     const idMap = await IdMap.load();
     idMap.set(asUlid("u1"), asNodeId("node-1"));
 
-    (chrome.bookmarks.get as any).mockResolvedValueOnce([
+    (browser.bookmarks.get as any).mockResolvedValueOnce([
       { id: "node-1", parentId: BAR, title: "Same", url: "https://example.com/" },
     ]);
 
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
 
-    expect(chrome.bookmarks.update).not.toHaveBeenCalled();
+    expect(browser.bookmarks.update).not.toHaveBeenCalled();
   });
 
   it("does not create a bookmark already mapped", async () => {
@@ -143,7 +143,7 @@ describe("applyRemoteChanges", () => {
     const idMap = await IdMap.load();
     idMap.set(asUlid("u1"), asNodeId("node-1"));
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
-    expect(chrome.bookmarks.create).not.toHaveBeenCalled();
+    expect(browser.bookmarks.create).not.toHaveBeenCalled();
   });
 
   it("removes a chrome node for a tombstoned remote bookmark", async () => {
@@ -155,7 +155,7 @@ describe("applyRemoteChanges", () => {
     const idMap = await IdMap.load();
     idMap.set(asUlid("u1"), asNodeId("node-1"));
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
-    expect(chrome.bookmarks.remove).toHaveBeenCalledWith("node-1");
+    expect(browser.bookmarks.remove).toHaveBeenCalledWith("node-1");
     expect(isSuppressed("https://example.com/")).toBe(true);
   });
 
@@ -163,7 +163,7 @@ describe("applyRemoteChanges", () => {
     const bm = bookmark({ id: "u1", url: "https://example.com/o", folder: "_other" });
     const idMap = await IdMap.load();
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
-    expect(chrome.bookmarks.create).toHaveBeenCalledWith({
+    expect(browser.bookmarks.create).toHaveBeenCalledWith({
       parentId: OTHER,
       title: "Example",
       url: "https://example.com/o",
@@ -176,10 +176,10 @@ describe("applyRemoteChanges", () => {
 
     // First getSubTree call (under BAR): no existing "Research" folder
     // Second getSubTree call (under the new Research folder): no existing "AI"
-    (chrome.bookmarks.getSubTree as any)
+    (browser.bookmarks.getSubTree as any)
       .mockResolvedValueOnce([{ id: BAR, children: [] }])
       .mockResolvedValueOnce([{ id: "research-id", children: [] }]);
-    (chrome.bookmarks.create as any)
+    (browser.bookmarks.create as any)
       .mockResolvedValueOnce({ id: "research-id", title: "Research" })  // folder 1
       .mockResolvedValueOnce({ id: "ai-id", title: "AI" })              // folder 2
       .mockResolvedValueOnce({ id: "bm-node", url: bm.url, title: bm.title }); // bookmark
@@ -187,19 +187,19 @@ describe("applyRemoteChanges", () => {
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
 
     // Verify the bookmark itself was created under the AI folder
-    const createCalls = (chrome.bookmarks.create as any).mock.calls;
+    const createCalls = (browser.bookmarks.create as any).mock.calls;
     const bmCreate = createCalls.find((c: any) => c[0].url === "https://example.com/nested");
     expect(bmCreate).toBeDefined();
     expect(bmCreate[0].parentId).toBe("ai-id");
   });
 
-  it("saves the id map even when a later chrome.bookmarks.create throws", async () => {
+  it("saves the id map even when a later browser.bookmarks.create throws", async () => {
     const bm1 = bookmark({ id: "u1", url: "https://example.com/ok" });
     const bm2 = bookmark({ id: "u2", url: "https://example.com/fail" });
     const idMap = await IdMap.load();
 
     // First create succeeds, second throws.
-    (chrome.bookmarks.create as any)
+    (browser.bookmarks.create as any)
       .mockResolvedValueOnce({ id: "node-1", url: bm1.url, title: bm1.title })
       .mockRejectedValueOnce(new Error("boom"));
 
@@ -217,10 +217,10 @@ describe("applyRemoteChanges", () => {
     const idMap = await IdMap.load();
 
     // Existing "Reading" folder under BAR
-    (chrome.bookmarks.getSubTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getSubTree as any).mockResolvedValueOnce([
       { id: BAR, children: [{ id: "reading-id", title: "Reading" }] },
     ]);
-    (chrome.bookmarks.create as any).mockResolvedValueOnce({
+    (browser.bookmarks.create as any).mockResolvedValueOnce({
       id: "bm-node",
       url: bm.url,
       title: bm.title,
@@ -229,8 +229,8 @@ describe("applyRemoteChanges", () => {
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
 
     // Only one create call (the bookmark itself) — the folder was reused
-    expect((chrome.bookmarks.create as any).mock.calls.length).toBe(1);
-    const bmCreate = (chrome.bookmarks.create as any).mock.calls[0];
+    expect((browser.bookmarks.create as any).mock.calls.length).toBe(1);
+    const bmCreate = (browser.bookmarks.create as any).mock.calls[0];
     expect(bmCreate[0].parentId).toBe("reading-id");
   });
 });

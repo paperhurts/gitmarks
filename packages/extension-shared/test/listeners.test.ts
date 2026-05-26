@@ -32,10 +32,10 @@ describe("listeners", () => {
       getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
       getMachineId: async () => machineId,
     });
-    expect(chrome.bookmarks.onCreated.addListener).toHaveBeenCalledTimes(1);
-    expect(chrome.bookmarks.onChanged.addListener).toHaveBeenCalledTimes(1);
-    expect(chrome.bookmarks.onMoved.addListener).toHaveBeenCalledTimes(1);
-    expect(chrome.bookmarks.onRemoved.addListener).toHaveBeenCalledTimes(1);
+    expect(browser.bookmarks.onCreated.addListener).toHaveBeenCalledTimes(1);
+    expect(browser.bookmarks.onChanged.addListener).toHaveBeenCalledTimes(1);
+    expect(browser.bookmarks.onMoved.addListener).toHaveBeenCalledTimes(1);
+    expect(browser.bookmarks.onRemoved.addListener).toHaveBeenCalledTimes(1);
   });
 
   it("flush pushes a pending create through GitHubClient.update", async () => {
@@ -53,7 +53,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
     createListener("node-new", {
       id: "node-new",
       parentId: BAR,
@@ -85,7 +85,7 @@ describe("listeners", () => {
 
     suppress("https://suppressed.example/");
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
     createListener("node-x", {
       id: "node-x",
       parentId: BAR,
@@ -109,7 +109,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
     for (let i = 0; i < 5; i++) {
       createListener(`node-${i}`, {
         id: `node-${i}`,
@@ -150,7 +150,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
     createListener("node-new", {
       id: "node-new",
       parentId: BAR,
@@ -205,7 +205,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const changeListener = (chrome.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    const changeListener = (browser.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
     changeListener("node-existing", { title: "New title" });
 
     await flushPending();
@@ -238,8 +238,8 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
-    const changeListener = (chrome.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const changeListener = (browser.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
 
     createListener("node-1", {
       id: "node-1",
@@ -257,7 +257,7 @@ describe("listeners", () => {
   });
 
   it("onChanged with no URL is suppressed when nodeId is in the node-suppression registry (title-only echo from apply-remote)", async () => {
-    // Issue #18 finding A: apply-remote's chrome.bookmarks.update({title})
+    // Issue #18 finding A: apply-remote's browser.bookmarks.update({title})
     // fires onChanged with changeInfo.url === undefined. URL-suppression
     // doesn't catch the echo. NodeId-suppression does.
     const update = vi.fn();
@@ -275,7 +275,7 @@ describe("listeners", () => {
     const { suppressNode } = await import("../src/lib/suppression.js");
     suppressNode("node-1");
 
-    const changeListener = (chrome.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    const changeListener = (browser.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
     changeListener("node-1", { title: "new" });
 
     await flushPending();
@@ -294,7 +294,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const removeListener = (chrome.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
+    const removeListener = (browser.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
     removeListener("never-mapped-node", {
       parentId: BAR,
       index: 0,
@@ -326,7 +326,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const changeListener = (chrome.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    const changeListener = (browser.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
     changeListener("never-mapped-node", { title: "Whatever" });
 
     await flushPending();
@@ -370,7 +370,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const removeListener = (chrome.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
+    const removeListener = (browser.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
     removeListener("node-doomed", {
       parentId: BAR,
       index: 0,
@@ -403,7 +403,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const removeListener = (chrome.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
+    const removeListener = (browser.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
     removeListener("node-x", {
       parentId: BAR,
       index: 0,
@@ -431,7 +431,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const removeListener = (chrome.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
+    const removeListener = (browser.bookmarks.onRemoved.addListener as any).mock.calls[0]![0];
     removeListener("folder-node", {
       parentId: BAR,
       index: 0,
@@ -458,7 +458,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
     createListener("node-1", {
       id: "node-1",
       parentId: BAR,
@@ -481,7 +481,7 @@ describe("listeners", () => {
 
   it("clears gitmarks:lastError after a successful flush", async () => {
     // Seed an error
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       "gitmarks:lastError": { when: 1, message: "old", source: "flush" },
     });
 
@@ -499,7 +499,7 @@ describe("listeners", () => {
       getMachineId: async () => machineId,
     });
 
-    const createListener = (chrome.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
     createListener("node-1", {
       id: "node-1",
       parentId: BAR,
@@ -510,7 +510,7 @@ describe("listeners", () => {
     // Advance past the debounce window to trigger runFlush (which clears the error key on success)
     await vi.advanceTimersByTimeAsync(600);
 
-    const stored = await chrome.storage.local.get("gitmarks:lastError");
+    const stored = await browser.storage.local.get("gitmarks:lastError");
     expect(stored["gitmarks:lastError"]).toBeUndefined();
   });
 });

@@ -47,7 +47,7 @@ describe("reconcile", () => {
     const read = vi.fn(async () => ({ data: remote, sha: "s0", etag: "" }));
     const client = fakeClient({ read, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [] },
         { id: OTHER, title: "Other Bookmarks", children: [] },
@@ -57,7 +57,7 @@ describe("reconcile", () => {
     const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
-    expect(chrome.bookmarks.create).toHaveBeenCalledWith({
+    expect(browser.bookmarks.create).toHaveBeenCalledWith({
       parentId: BAR,
       title: "Example",
       url: "https://remote.example/",
@@ -78,7 +78,7 @@ describe("reconcile", () => {
     });
     const client = fakeClient({ read, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [
           { id: "node-1", parentId: BAR, title: "Local", url: "https://local.example/" },
@@ -107,7 +107,7 @@ describe("reconcile", () => {
     const update = vi.fn();
     const client = fakeClient({ read, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [
           { id: "node-existing", parentId: BAR, title: "Shared", url: "https://shared.example/" },
@@ -119,7 +119,7 @@ describe("reconcile", () => {
     const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
-    expect(chrome.bookmarks.create).not.toHaveBeenCalled();
+    expect(browser.bookmarks.create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
     expect(idMap.nodeForUlid(asUlid("u-existing"))).toBe("node-existing");
   });
@@ -140,7 +140,7 @@ describe("reconcile", () => {
     });
     const client = fakeClient({ read, write, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [
           { id: "node-local", parentId: BAR, title: "Local", url: "https://local.example/" },
