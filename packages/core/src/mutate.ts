@@ -51,3 +51,39 @@ export function gcTombstones(
   }
   return { ...file, updated_at: nowIso, bookmarks: kept };
 }
+
+export interface BookmarkPatch {
+  id: string;
+  patch: Partial<Omit<Bookmark, "id">>;
+}
+
+export function updateBookmarks(
+  file: BookmarksFile,
+  patches: BookmarkPatch[],
+  nowIso: string,
+): BookmarksFile {
+  if (patches.length === 0) {
+    return { ...file, updated_at: nowIso };
+  }
+  const byId = new Map<string, Partial<Omit<Bookmark, "id">>>();
+  for (const p of patches) byId.set(p.id, p.patch);
+  const next = file.bookmarks.map((b) => {
+    const patch = byId.get(b.id);
+    if (patch === undefined) return b;
+    byId.delete(b.id);
+    return { ...b, ...patch, updated_at: nowIso };
+  });
+  if (byId.size > 0) {
+    const missing = [...byId.keys()].join(", ");
+    throw new Error(`bookmark not found: ${missing}`);
+  }
+  return { ...file, updated_at: nowIso, bookmarks: next };
+}
+
+export function restoreBookmark(
+  file: BookmarksFile,
+  id: string,
+  nowIso: string,
+): BookmarksFile {
+  return updateBookmark(file, id, { deleted_at: null }, nowIso);
+}

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import type { GitHubClient, TagsFile } from "@gitmarks/core";
-import { TagManager } from "../components/TagManager.js";
+import type { GitHubClient } from "@gitmarks/core";
 import { Layout, type LayoutStatus } from "../components/Layout.js";
+import { TrashList } from "../components/TrashList.js";
 import { useGitmarksData } from "../hooks/useGitmarksData.js";
+import { bulkRestore } from "../lib/bulk-mutations.js";
 import { toNetscapeHtml } from "../lib/netscape-export.js";
 import { downloadString } from "../lib/download.js";
 
@@ -10,8 +11,8 @@ interface Props {
   client: GitHubClient;
 }
 
-export function TagsPage({ client }: Props) {
-  const { bookmarksFile, tagsFile, loading, error, refresh, writeTags } = useGitmarksData(client);
+export function TrashPage({ client }: Props) {
+  const { bookmarksFile, tagsFile, loading, error, refresh, writeBookmarks } = useGitmarksData(client);
   const [refreshing, setRefreshing] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
 
@@ -21,9 +22,7 @@ export function TagsPage({ client }: Props) {
       ? { kind: "err", message: writeError }
       : error != null
         ? { kind: "err", message: error }
-        : tagsFile != null
-          ? { kind: "ok", message: `${Object.keys(tagsFile.tags).length} tags` }
-          : { kind: "loading", message: "loading…" };
+        : { kind: "ok", message: "trash" };
 
   async function onRefresh() {
     setRefreshing(true);
@@ -39,10 +38,11 @@ export function TagsPage({ client }: Props) {
     downloadString(toNetscapeHtml(bookmarksFile), "gitmarks.html", "text/html");
   }
 
-  async function onMutate(mutator: (f: TagsFile) => TagsFile) {
+  async function onRestore(id: string) {
     setWriteError(null);
     try {
-      await writeTags(mutator, "web: update tags");
+      const mutator = bulkRestore([id], new Date().toISOString());
+      await writeBookmarks(mutator, `restore bookmark ${id}`);
     } catch (err) {
       setWriteError(err instanceof Error ? err.message : String(err));
     }
@@ -50,8 +50,21 @@ export function TagsPage({ client }: Props) {
 
   return (
     <Layout status={status} onRefresh={onRefresh} onExport={onExport} refreshing={refreshing}>
-      <div data-testid="tags-page">
-        {tagsFile != null && <TagManager tagsFile={tagsFile} onMutate={onMutate} />}
+      <div data-testid="trash-page" className="p-4">
+        <h1 className="text-magenta text-2xl mb-4">Trash</h1>
+        <p className="text-cyan-soft/60 text-xs mb-4">
+          Soft-deleted bookmarks within the 30-day GC window. After 30 days the
+          extension's gcTombstones removes them from bookmarks.json; git history
+          retains everything.
+        </p>
+        {bookmarksFile != null && tagsFile != null && (
+          <TrashList
+            bookmarksFile={bookmarksFile}
+            tagsFile={tagsFile}
+            nowIso={new Date().toISOString()}
+            onRestore={onRestore}
+          />
+        )}
       </div>
     </Layout>
   );

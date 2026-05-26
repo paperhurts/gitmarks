@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeUrl } from "../src/url.js";
+import { normalizeUrl, isSafeBookmarkUrl } from "../src/url.js";
 
 describe("normalizeUrl", () => {
   it("preserves a clean URL unchanged (modulo WHATWG normalization)", () => {
@@ -104,5 +104,40 @@ describe("normalizeUrl", () => {
         }),
       ).toBe("https://example.com/path");
     });
+  });
+});
+
+describe("isSafeBookmarkUrl", () => {
+  it("accepts http and https", () => {
+    expect(isSafeBookmarkUrl("https://example.com/")).toBe(true);
+    expect(isSafeBookmarkUrl("http://example.com/")).toBe(true);
+  });
+
+  it("accepts mailto, ftp, chrome, about, moz-extension, chrome-extension, view-source", () => {
+    expect(isSafeBookmarkUrl("mailto:a@b.com")).toBe(true);
+    expect(isSafeBookmarkUrl("ftp://example.com/")).toBe(true);
+    expect(isSafeBookmarkUrl("chrome://settings")).toBe(true);
+    expect(isSafeBookmarkUrl("about:blank")).toBe(true);
+    expect(isSafeBookmarkUrl("moz-extension://abc/page.html")).toBe(true);
+    expect(isSafeBookmarkUrl("chrome-extension://abc/page.html")).toBe(true);
+    expect(isSafeBookmarkUrl("view-source:https://example.com/")).toBe(true);
+  });
+
+  it("rejects javascript:", () => {
+    expect(isSafeBookmarkUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeBookmarkUrl("JAVASCRIPT:alert(1)")).toBe(false);
+  });
+
+  it("rejects data:", () => {
+    expect(isSafeBookmarkUrl("data:text/html,<script>alert(1)</script>")).toBe(false);
+  });
+
+  it("rejects vbscript:", () => {
+    expect(isSafeBookmarkUrl("vbscript:msgbox(1)")).toBe(false);
+  });
+
+  it("rejects malformed URLs", () => {
+    expect(isSafeBookmarkUrl("not a url")).toBe(false);
+    expect(isSafeBookmarkUrl("")).toBe(false);
   });
 });

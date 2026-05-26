@@ -6,10 +6,12 @@ interface Props {
 }
 
 const DEFAULT_COLOR = "#475569";
+const COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 
 export function TagChip({ name, tagsFile }: Props) {
   const tag = tagsFile.tags[name];
-  const color = tag?.color ?? DEFAULT_COLOR;
+  const rawColor = tag?.color ?? DEFAULT_COLOR;
+  const color = COLOR_RE.test(rawColor) ? rawColor : DEFAULT_COLOR;
   return (
     <span
       className="inline-block px-2 py-0.5 rounded text-xs"

@@ -1,5 +1,5 @@
 import type { Bookmark } from "@gitmarks/core";
-import { newUlid, normalizeUrl } from "@gitmarks/core";
+import { newUlid, normalizeUrl, isSafeBookmarkUrl } from "@gitmarks/core";
 
 export interface BuildBookmarkInput {
   url: string;
@@ -11,6 +11,9 @@ export interface BuildBookmarkInput {
 }
 
 export function buildBookmark(input: BuildBookmarkInput): Bookmark {
+  if (!isSafeBookmarkUrl(input.url)) {
+    throw new Error(`Refusing to save bookmark with unsafe URL scheme: ${input.url}`);
+  }
   return {
     id: newUlid(),
     url: normalizeUrl(input.url, {

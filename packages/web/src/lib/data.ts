@@ -20,3 +20,11 @@ export function allUsedTags(bookmarks: Bookmark[]): Set<string> {
   for (const b of bookmarks) for (const t of b.tags) out.add(t);
   return out;
 }
+
+export function deletedBookmarks(file: BookmarksFile, nowIso: string, gcDays = 30): Bookmark[] {
+  const cutoffMs = new Date(nowIso).getTime() - gcDays * 86_400_000;
+  return file.bookmarks.filter((b) => {
+    if (b.deleted_at == null) return false;
+    return new Date(b.deleted_at).getTime() > cutoffMs;
+  });
+}
