@@ -5,13 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project status
 
 Five packages are merged to main and working:
-- `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers, example fixtures. 65 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 96 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers, example fixtures. 77 unit tests.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 100 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+ for MV3 SW parity. Load via `about:debugging` → "Load Temporary Add-on".
-- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 105 unit + component tests.
+- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 109 unit + component tests.
 
-Total: 272 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
+Total: 286 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
 
 Pending packages (in dependency order): Safari.
 
@@ -32,6 +32,10 @@ These are spec-level constraints; don't violate without an explicit discussion:
 - **IDs are ULIDs generated client-side.** Native browser node IDs are not stable across reinstalls — the extension maintains a `{ulid: chrome_node_id}` map in `chrome.storage.local`, rebuilt by URL match.
 - **Folder ↔ string path:** `Bookmarks Bar` ↔ `""` (root), `Other Bookmarks` ↔ `"_other"`, nested folders joined with `/`. Folder structure is derived from bookmarks, not stored separately.
 - **Loop suppression:** when applying a remote change to `chrome.bookmarks`, register the URL in an in-memory TTL map for ~2s so our own listener doesn't echo it back to GitHub.
+- **URL safety:** Bookmark URLs are checked against an allowlist of safe schemes (`isSafeBookmarkUrl` in `@gitmarks/core`) at three points: (a) save time in the extension's `buildBookmark` factory, (b) render time in the web UI's `BookmarkRow`, and (c) the extension's `apply-remote` boundary that writes remote entries into the native bookmark tree. Unsafe schemes (`javascript:`, `data:`, etc.) are rejected/skipped.
+- **Remote file validation:** `useGitmarksData` re-validates `bookmarks.json` and `tags.json` through Zod (`bookmarksFileSchema` / `tagsFileSchema`) after reading from GitHub. Malformed remote data surfaces as an error rather than rendering attacker-controlled fields.
+- **Tag color guard:** `TagChip` regex-validates the color string before placing it into a CSS `style` object; malformed colors fall back to a default.
+- **CSP:** Web UI's `index.html` and both extension manifests carry an explicit Content-Security-Policy restricting `connect-src` to `https://api.github.com`, disallowing inline scripts, framing, and form actions.
 
 ## Architecture by package
 
@@ -59,7 +63,7 @@ Cross-browser source — owns all popup, options, background, and `src/lib/` mod
   - `folder-path.ts` — tree node ↔ `"Research/AI"` path conversion
   - `id-mapping.ts` — bidirectional `{ulid: chromeNodeId}` map
   - `suppression.ts` — in-memory URL + nodeId TTL maps (2s) to prevent loop-back
-  - `apply-remote.ts` — push a `BookmarksFile` state into `browser.bookmarks`
+  - `apply-remote.ts` — push a `BookmarksFile` state into `browser.bookmarks`; filters unsafe URL schemes (`javascript:`, `data:`, etc.) via `isSafeBookmarkUrl` from core
   - `reconcile.ts` — merge local tree and remote file by URL on cold start
   - `listeners.ts` — `browser.bookmarks.*` listeners with 500ms global debounce, batched flush
   - `background-core.ts` — dependency-injected `runMaybeReconcile` and `runPollRemoteOnce` (testable orchestration extracted from the SW entry)
