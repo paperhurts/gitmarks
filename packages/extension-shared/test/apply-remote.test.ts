@@ -233,4 +233,31 @@ describe("applyRemoteChanges", () => {
     const bmCreate = (browser.bookmarks.create as any).mock.calls[0];
     expect(bmCreate[0].parentId).toBe("reading-id");
   });
+
+  it("skips remote bookmarks with unsafe URL schemes (javascript:, data:)", async () => {
+    const idMap = await IdMap.load();
+    const bms = [
+      bookmark({ id: "u1", url: "javascript:alert(1)", title: "Evil JS" }),
+      bookmark({ id: "u2", url: "https://example.com/safe", title: "Safe" }),
+      bookmark({ id: "u3", url: "data:text/html,<script>1</script>", title: "Evil Data" }),
+    ];
+    await applyRemoteChanges(file(bms), idMap, BAR, OTHER);
+    const calls = (browser.bookmarks.create as unknown as { mock: { calls: Array<[{ url?: string }]> } }).mock.calls;
+    const urls = calls.map((c) => c[0].url ?? "");
+    expect(urls).toContain("https://example.com/safe");
+    expect(urls).not.toContain("javascript:alert(1)");
+    expect(urls.some((u) => u.startsWith("data:"))).toBe(false);
+  });
+
+  it("skips a remote edit with an unsafe URL scheme", async () => {
+    const idMap = await IdMap.load();
+    // Pre-map u1 to an existing local node so applyRemoteChanges hits the edit branch.
+    idMap.set(asUlid("u1"), asNodeId("node-1"));
+    (browser.bookmarks.get as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce([
+      { id: "node-1", title: "Old title", url: "https://example.com/old" },
+    ]);
+    const bm = bookmark({ id: "u1", url: "javascript:alert(2)", title: "Evil edit" });
+    await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
+    expect(browser.bookmarks.update).not.toHaveBeenCalled();
+  });
 });
