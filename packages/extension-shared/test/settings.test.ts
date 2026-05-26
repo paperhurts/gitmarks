@@ -20,7 +20,7 @@ describe("settings", () => {
 
   it("defaults stripTrackingParams to false when omitted in stored data", async () => {
     // Legacy stored settings without the field should still parse via Zod's default.
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       "gitmarks:settings": {
         token: "t",
         owner: "alice",
@@ -33,7 +33,7 @@ describe("settings", () => {
   });
 
   it("throws SettingsCorruptError when the stored value is malformed", async () => {
-    await chrome.storage.local.set({ "gitmarks:settings": { not: "valid" } });
+    await browser.storage.local.set({ "gitmarks:settings": { not: "valid" } });
     await expect(loadSettings()).rejects.toThrow(/invalid/);
   });
 
