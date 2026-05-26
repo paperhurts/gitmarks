@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import type { Bookmarks } from "webextension-polyfill";
 import type { BookmarksFile } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
@@ -72,7 +73,7 @@ async function applyRemoteEdit(
   remoteUrl: string,
   remoteTitle: string,
 ): Promise<void> {
-  let current: chrome.bookmarks.BookmarkTreeNode | undefined;
+  let current: Bookmarks.BookmarkTreeNode | undefined;
   try {
     const found = await browser.bookmarks.get(nodeId);
     current = found[0];

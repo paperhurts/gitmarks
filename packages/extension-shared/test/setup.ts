@@ -1,4 +1,5 @@
 import { vi, beforeEach } from "vitest";
+import type { Bookmarks, Runtime } from "webextension-polyfill";
 
 interface StorageBackend {
   data: Record<string, unknown>;
@@ -34,18 +35,18 @@ const chromeStub = {
     openOptionsPage: vi.fn(),
     sendMessage: vi.fn(),
     onMessage: { addListener: vi.fn() },
-    lastError: undefined as chrome.runtime.LastError | undefined,
+    lastError: undefined as Runtime.PropertyLastErrorType | undefined,
   },
   bookmarks: {
-    create: vi.fn(async (props: chrome.bookmarks.BookmarkCreateArg) => {
-      return { id: `mock-${Math.random().toString(36).slice(2, 10)}`, ...props } as chrome.bookmarks.BookmarkTreeNode;
+    create: vi.fn(async (props: Bookmarks.CreateDetails) => {
+      return { id: `mock-${Math.random().toString(36).slice(2, 10)}`, ...props } as Bookmarks.BookmarkTreeNode;
     }),
-    update: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
-    move: vi.fn(async () => ({} as chrome.bookmarks.BookmarkTreeNode)),
+    update: vi.fn(async () => ({} as Bookmarks.BookmarkTreeNode)),
+    move: vi.fn(async () => ({} as Bookmarks.BookmarkTreeNode)),
     remove: vi.fn(async () => {}),
-    get: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
-    getTree: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
-    getSubTree: vi.fn(async () => [] as chrome.bookmarks.BookmarkTreeNode[]),
+    get: vi.fn(async () => [] as Bookmarks.BookmarkTreeNode[]),
+    getTree: vi.fn(async () => [] as Bookmarks.BookmarkTreeNode[]),
+    getSubTree: vi.fn(async () => [] as Bookmarks.BookmarkTreeNode[]),
     onCreated: { addListener: vi.fn(), removeListener: vi.fn() },
     onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
     onMoved: { addListener: vi.fn(), removeListener: vi.fn() },
