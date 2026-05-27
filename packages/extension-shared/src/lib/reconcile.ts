@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import type { Bookmarks } from "webextension-polyfill";
 import type {
   BookmarksFile,
   Bookmark,
@@ -6,6 +7,7 @@ import type {
 } from "@gitmarks/core";
 import {
   GitHubNotFoundError,
+  isSafeBookmarkUrl,
   newUlid,
   normalizeUrl,
   addBookmark,
@@ -43,6 +45,10 @@ export async function reconcile(
   const remoteByUrl = new Map<string, Bookmark>();
   for (const b of remote.bookmarks) {
     if (b.deleted_at != null) continue;
+    if (!isSafeBookmarkUrl(b.url)) {
+      console.warn("[gitmarks] reconcile: skipping remote bookmark with unsafe URL scheme", { ulid: b.id, url: b.url });
+      continue;
+    }
     remoteByUrl.set(b.url, b);
   }
 
@@ -58,6 +64,10 @@ export async function reconcile(
   const localOnly: LocalEntry[] = [];
   for (const [url, local] of localByUrl) {
     if (!remoteByUrl.has(url)) {
+      if (!isSafeBookmarkUrl(url)) {
+        console.warn("[gitmarks] reconcile: skipping local bookmark with unsafe URL scheme", { url });
+        continue;
+      }
       localOnly.push(local);
     }
   }
@@ -121,7 +131,7 @@ async function collectLocalBookmarks(
 }
 
 function walk(
-  node: chrome.bookmarks.BookmarkTreeNode,
+  node: Bookmarks.BookmarkTreeNode,
   out: Map<string, LocalEntry>,
 ): void {
   if (node.url != null && node.url.length > 0) {

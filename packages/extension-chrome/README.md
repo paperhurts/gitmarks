@@ -41,6 +41,15 @@ are deferred). Pin it for easy access.
    first save)".
 5. Click **Save**.
 
+## Uninstall
+
+Removing the extension clears `chrome.storage.local` for this browser profile. **It does NOT revoke your GitHub PAT** — that token remains valid on github.com until you delete it manually:
+
+1. github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens.
+2. Find the token you created for gitmarks → **Delete**.
+
+This is the authoritative way to invalidate the credential. Re-installing the extension after revoking will prompt for a fresh PAT.
+
 ## Manual smoke test
 
 This is the **authoritative verification** that production wiring works.

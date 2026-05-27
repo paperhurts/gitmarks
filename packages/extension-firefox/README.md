@@ -27,6 +27,15 @@ Identical to Chrome — see `packages/extension-chrome/README.md`
 "First-run setup". The popup, options page, PAT validation, and the
 optional **Strip tracking parameters** toggle all behave the same.
 
+## Uninstall
+
+Removing the add-on clears its extension-local storage for this Firefox profile. **It does NOT revoke your GitHub PAT** — that token remains valid on github.com until you delete it manually:
+
+1. github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens.
+2. Find the token you created for gitmarks → **Delete**.
+
+This is the authoritative way to invalidate the credential.
+
 ## Manual smoke test
 
 The unit test suite (`pnpm --filter @gitmarks/extension-shared test`,
