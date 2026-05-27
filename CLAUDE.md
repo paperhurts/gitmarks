@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Five packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers, example fixtures. 77 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 100 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 104 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+ for MV3 SW parity. Load via `about:debugging` → "Load Temporary Add-on".
 - `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 109 unit + component tests.
 
-Total: 286 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
+Total: 290 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell.
 
 Pending packages (in dependency order): Safari.
 
@@ -32,10 +32,10 @@ These are spec-level constraints; don't violate without an explicit discussion:
 - **IDs are ULIDs generated client-side.** Native browser node IDs are not stable across reinstalls — the extension maintains a `{ulid: chrome_node_id}` map in `chrome.storage.local`, rebuilt by URL match.
 - **Folder ↔ string path:** `Bookmarks Bar` ↔ `""` (root), `Other Bookmarks` ↔ `"_other"`, nested folders joined with `/`. Folder structure is derived from bookmarks, not stored separately.
 - **Loop suppression:** when applying a remote change to `chrome.bookmarks`, register the URL in an in-memory TTL map for ~2s so our own listener doesn't echo it back to GitHub.
-- **URL safety:** Bookmark URLs are checked against an allowlist of safe schemes (`isSafeBookmarkUrl` in `@gitmarks/core`) at three points: (a) save time in the extension's `buildBookmark` factory, (b) render time in the web UI's `BookmarkRow`, and (c) the extension's `apply-remote` boundary that writes remote entries into the native bookmark tree. Unsafe schemes (`javascript:`, `data:`, etc.) are rejected/skipped.
+- **URL safety:** Bookmark URLs are checked against an allowlist of safe schemes (`isSafeBookmarkUrl` in `@gitmarks/core`) at every write or render boundary: (a) popup save in `buildBookmark` (throws); (b) the SW listener path in `applyBatch` create + update branches (skip + warn); (c) reconcile's `remoteByUrl` construction (filters unsafe remote entries before they reach the local tree or the idMap); (d) reconcile's `localOnly` upload loop (filters unsafe local entries before pushing to GitHub); (e) the `apply-remote` boundary that writes remote entries into `browser.bookmarks` (skip + warn); (f) the web UI's `BookmarkRow` render (turns unsafe URLs into non-clickable italic spans with a tooltip). Unsafe schemes (`javascript:`, `data:`, etc.) are rejected/skipped everywhere bookmarks cross a trust boundary.
 - **Remote file validation:** `useGitmarksData` re-validates `bookmarks.json` and `tags.json` through Zod (`bookmarksFileSchema` / `tagsFileSchema`) after reading from GitHub. Malformed remote data surfaces as an error rather than rendering attacker-controlled fields.
 - **Tag color guard:** `TagChip` regex-validates the color string before placing it into a CSS `style` object; malformed colors fall back to a default.
-- **CSP:** Web UI's `index.html` and both extension manifests carry an explicit Content-Security-Policy restricting `connect-src` to `https://api.github.com`, disallowing inline scripts, framing, and form actions.
+- **CSP:** Both extension manifests carry an explicit `content_security_policy.extension_pages` restricting `connect-src` to `'self' https://api.github.com`, disallowing inline scripts. The web UI's `<meta>` CSP is injected by a Vite plugin scoped to `apply: "build"` only (running it in dev would block Vite's HMR WebSocket); `frame-ancestors` is intentionally omitted because `<meta>` cannot enforce it per CSP3 — clickjacking defense must come from an HTTP header at the hosting layer.
 
 ## Architecture by package
 
