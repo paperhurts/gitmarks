@@ -17,6 +17,6 @@ export default defineManifest({
     type: "module",
   },
   content_security_policy: {
-    extension_pages: "script-src 'self'; object-src 'self'; connect-src https://api.github.com",
+    extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https://api.github.com",
   },
 });
