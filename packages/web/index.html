@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none';"
-    />
+    <!--
+      Content-Security-Policy is injected by vite.config.ts on production build
+      only — it would break the Vite HMR WebSocket (ws://localhost:*) in dev.
+      `frame-ancestors` is intentionally omitted because <meta> cannot enforce
+      it per CSP3; clickjacking defense must come from the hosting layer's
+      X-Frame-Options or HTTP-header CSP.
+    -->
     <title>gitmarks</title>
   </head>
   <body class="bg-ink text-cyan-soft font-mono antialiased">
