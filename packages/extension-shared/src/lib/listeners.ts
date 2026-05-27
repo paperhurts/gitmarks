@@ -118,8 +118,12 @@ function onCreated(_id: string, node: Bookmarks.BookmarkTreeNode): void {
 }
 
 function onChanged(id: string, changeInfo: Bookmarks.OnChangedChangeInfoType): void {
+  // Type note: the polyfill types `title: string` (required) on this payload,
+  // but Chrome's runtime omits it on URL-only changes. The undefined checks
+  // below are load-bearing despite the type — don't "clean up" the dead branch
+  // or rename sync silently breaks.
   const url = changeInfo.url;
-  const title = changeInfo.title;
+  const title = changeInfo.title as string | undefined;
   if (url === undefined && title === undefined) return;
   if (url !== undefined && title !== undefined) {
     pending.push({ kind: "update", nodeId: id, url, title });

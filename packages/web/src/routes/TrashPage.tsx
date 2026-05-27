@@ -17,6 +17,7 @@ export function TrashPage({ client }: Props) {
   const { bookmarksFile, tagsFile, loading, error, refresh, writeBookmarks } = useGitmarksData(client);
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
 
   const status: LayoutStatus = loading
@@ -48,16 +49,19 @@ export function TrashPage({ client }: Props) {
 
   async function onRestore(id: string) {
     setWriteError(null);
+    setWriting(true);
     try {
       const mutator = bulkRestore([id], new Date().toISOString());
       await writeBookmarks(mutator, `restore bookmark ${id}`);
     } catch (err) {
       setWriteError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setWriting(false);
     }
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing} busy={writing}>
       <div data-testid="trash-page" className="p-4">
         <h1 className="text-magenta text-2xl mb-4">Trash</h1>
         <p className="text-cyan-soft/60 text-xs mb-4">

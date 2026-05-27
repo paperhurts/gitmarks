@@ -30,6 +30,7 @@ export function ListPage({ client }: Props) {
   const [query, setQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
 
   const visible = useMemo(
@@ -86,16 +87,19 @@ export function ListPage({ client }: Props) {
     mutator: (f: BookmarksFile) => BookmarksFile,
   ) {
     setWriteError(null);
+    setWriting(true);
     try {
       await writeBookmarks(mutator, message);
       selection.clear();
     } catch (err) {
       setWriteError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setWriting(false);
     }
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing} busy={writing}>
       <div data-testid="list-page" className="grid grid-cols-[12rem_1fr] gap-4 p-4">
         <aside className="border-r border-fog pr-4">
           <h2 className="text-magenta text-sm uppercase mb-2">Tags</h2>
