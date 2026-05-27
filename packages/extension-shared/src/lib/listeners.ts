@@ -1,4 +1,5 @@
 import browser from "webextension-polyfill";
+import type { Bookmarks } from "webextension-polyfill";
 import type {
   Bookmark,
   BookmarksFile,
@@ -6,6 +7,7 @@ import type {
 } from "@gitmarks/core";
 import {
   addBookmark,
+  isSafeBookmarkUrl,
   newUlid,
   normalizeUrl,
   softDeleteBookmark,
@@ -104,7 +106,7 @@ async function runFlush(): Promise<void> {
   }
 }
 
-function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
+function onCreated(_id: string, node: Bookmarks.BookmarkTreeNode): void {
   if (node.url == null || node.url.length === 0) return;
   pending.push({
     kind: "create",
@@ -115,9 +117,13 @@ function onCreated(_id: string, node: chrome.bookmarks.BookmarkTreeNode): void {
   schedule();
 }
 
-function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo): void {
+function onChanged(id: string, changeInfo: Bookmarks.OnChangedChangeInfoType): void {
+  // Type note: the polyfill types `title: string` (required) on this payload,
+  // but Chrome's runtime omits it on URL-only changes. The undefined checks
+  // below are load-bearing despite the type — don't "clean up" the dead branch
+  // or rename sync silently breaks.
   const url = changeInfo.url;
-  const title = changeInfo.title;
+  const title = changeInfo.title as string | undefined;
   if (url === undefined && title === undefined) return;
   if (url !== undefined && title !== undefined) {
     pending.push({ kind: "update", nodeId: id, url, title });
@@ -129,11 +135,11 @@ function onChanged(id: string, changeInfo: chrome.bookmarks.BookmarkChangeInfo):
   schedule();
 }
 
-function onMoved(_id: string, _moveInfo: chrome.bookmarks.BookmarkMoveInfo): void {
+function onMoved(_id: string, _moveInfo: Bookmarks.OnMovedMoveInfoType): void {
   // Folder moves are intentionally not pushed from the listener; the periodic reconcile catches folder drift.
 }
 
-function onRemoved(id: string, removeInfo: chrome.bookmarks.BookmarkRemoveInfo): void {
+function onRemoved(id: string, removeInfo: Bookmarks.OnRemovedRemoveInfoType): void {
   // Only sync bookmarks (URL-bearing nodes), not folders.
   if (removeInfo.node.url == null || removeInfo.node.url.length === 0) return;
   pending.push({ kind: "remove", nodeId: id, url: removeInfo.node.url });
@@ -246,6 +252,10 @@ function applyBatch(
   let file = initial;
   for (const event of batch) {
     if (event.kind === "create") {
+      if (!isSafeBookmarkUrl(event.url)) {
+        console.warn("[gitmarks] skipping create event with unsafe URL scheme", { url: event.url });
+        continue;
+      }
       // Skip if already mapped — a previous batch already created the remote entry;
       // treat duplicate create events as no-ops.
       const id = createUlids.get(event.nodeId);
@@ -275,6 +285,10 @@ function applyBatch(
       if (existing == null) continue;
       const patch: Partial<Omit<Bookmark, "id">> = {};
       if ("url" in event && event.url !== undefined) {
+        if (!isSafeBookmarkUrl(event.url)) {
+          console.warn("[gitmarks] skipping update event with unsafe URL scheme", { url: event.url });
+          continue;
+        }
         const normalized = normalizeUrl(event.url, { stripTrackingParams });
         if (normalized !== existing.url) patch.url = normalized;
       }

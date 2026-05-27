@@ -13,9 +13,9 @@ describe("machine-id", () => {
     expect(a).toBe(b);
   });
 
-  it("persists the id in chrome.storage.local under 'gitmarks:machineId'", async () => {
+  it("persists the id in browser.storage.local under 'gitmarks:machineId'", async () => {
     const id = await getMachineId();
-    const stored = await chrome.storage.local.get("gitmarks:machineId");
+    const stored = await browser.storage.local.get("gitmarks:machineId");
     expect(stored["gitmarks:machineId"]).toBe(id);
   });
 });

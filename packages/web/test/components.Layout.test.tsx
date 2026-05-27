@@ -54,4 +54,23 @@ describe("Layout", () => {
     await user.click(screen.getByRole("button", { name: /export/i }));
     expect(onExport).toHaveBeenCalled();
   });
+
+  it("renders a Sign out button when onSignOut is provided and invokes it", async () => {
+    const onSignOut = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <Layout
+          status={{ kind: "ok", message: "synced" }}
+          onRefresh={() => {}}
+          onSignOut={onSignOut}
+          refreshing={false}
+        >
+          <div />
+        </Layout>
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("button", { name: /sign out/i }));
+    expect(onSignOut).toHaveBeenCalled();
+  });
 });
