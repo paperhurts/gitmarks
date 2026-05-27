@@ -1,5 +1,6 @@
 import browser from "webextension-polyfill";
-import type { BookmarksFile } from "@gitmarks/core";
+import type { Bookmarks } from "webextension-polyfill";
+import { type BookmarksFile, isSafeBookmarkUrl } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
 import { suppress, suppressNode } from "./suppression.js";
@@ -16,7 +17,7 @@ export async function applyRemoteChanges(
 
       if (bm.deleted_at != null) {
         if (existingNode != null) {
-          suppress(bm.url);
+          if (isSafeBookmarkUrl(bm.url)) suppress(bm.url);
           try {
             await browser.bookmarks.remove(existingNode);
             idMap.removeByUlid(asUlid(bm.id));
@@ -35,6 +36,13 @@ export async function applyRemoteChanges(
             }
           }
         }
+        continue;
+      }
+
+      if (!isSafeBookmarkUrl(bm.url)) {
+        console.warn("[gitmarks] skipping remote bookmark with unsafe URL scheme", {
+          ulid: bm.id, url: bm.url,
+        });
         continue;
       }
 
@@ -72,7 +80,7 @@ async function applyRemoteEdit(
   remoteUrl: string,
   remoteTitle: string,
 ): Promise<void> {
-  let current: chrome.bookmarks.BookmarkTreeNode | undefined;
+  let current: Bookmarks.BookmarkTreeNode | undefined;
   try {
     const found = await browser.bookmarks.get(nodeId);
     current = found[0];

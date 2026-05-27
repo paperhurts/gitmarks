@@ -47,7 +47,7 @@ describe("reconcile", () => {
     const read = vi.fn(async () => ({ data: remote, sha: "s0", etag: "" }));
     const client = fakeClient({ read, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [] },
         { id: OTHER, title: "Other Bookmarks", children: [] },
@@ -57,7 +57,7 @@ describe("reconcile", () => {
     const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
-    expect(chrome.bookmarks.create).toHaveBeenCalledWith({
+    expect(browser.bookmarks.create).toHaveBeenCalledWith({
       parentId: BAR,
       title: "Example",
       url: "https://remote.example/",
@@ -78,7 +78,7 @@ describe("reconcile", () => {
     });
     const client = fakeClient({ read, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [
           { id: "node-1", parentId: BAR, title: "Local", url: "https://local.example/" },
@@ -107,7 +107,7 @@ describe("reconcile", () => {
     const update = vi.fn();
     const client = fakeClient({ read, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [
           { id: "node-existing", parentId: BAR, title: "Shared", url: "https://shared.example/" },
@@ -119,9 +119,75 @@ describe("reconcile", () => {
     const idMap = await IdMap.load();
     await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
 
-    expect(chrome.bookmarks.create).not.toHaveBeenCalled();
+    expect(browser.bookmarks.create).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
     expect(idMap.nodeForUlid(asUlid("u-existing"))).toBe("node-existing");
+  });
+
+  it("does not upload local bookmarks with unsafe URL schemes", async () => {
+    const remote: BookmarksFile = {
+      version: 1,
+      updated_at: nowIso,
+      bookmarks: [],
+    };
+    let written: BookmarksFile | null = null;
+    const read = vi.fn(async () => ({ data: remote, sha: "s0", etag: "" }));
+    const update = vi.fn(async (_p: string, mutate: any) => {
+      written = mutate(remote);
+      return { data: written, sha: "s1", etag: "" };
+    });
+    const client = fakeClient({ read, update });
+
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
+      { id: "root", children: [
+        { id: BAR, title: "Bookmarks Bar", children: [
+          { id: "node-safe", parentId: BAR, title: "Safe", url: "https://safe.example/" },
+          { id: "node-evil", parentId: BAR, title: "Evil", url: "javascript:evil()" },
+        ] },
+        { id: OTHER, title: "Other Bookmarks", children: [] },
+      ] },
+    ]);
+
+    const idMap = await IdMap.load();
+    await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
+
+    // The safe bookmark is uploaded; the unsafe one is silently dropped.
+    expect(written).not.toBeNull();
+    const urls = written!.bookmarks.map((b) => b.url);
+    expect(urls).toContain("https://safe.example/");
+    expect(urls).not.toContain("javascript:evil()");
+  });
+
+  it("does not pre-map idMap entries for unsafe-URL remote bookmarks", async () => {
+    // An attacker-controlled remote file has an unsafe URL. A local bookmark
+    // happens to have the same URL. Without the fix the idMap pre-mapping loop
+    // would create a phantom mapping, then applyRemoteChanges would skip the
+    // entry (URL guard) but idMap.save() would persist the phantom mapping,
+    // enabling a later tombstone to delete the user's local bookmark.
+    const remote: BookmarksFile = {
+      version: 1,
+      updated_at: nowIso,
+      bookmarks: [bm({ id: "evil-ulid", url: "javascript:evil()" })],
+    };
+    const read = vi.fn(async () => ({ data: remote, sha: "s0", etag: "" }));
+    const update = vi.fn();
+    const client = fakeClient({ read, update });
+
+    // Local tree has a bookmark at the same (unsafe) URL.
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
+      { id: "root", children: [
+        { id: BAR, title: "Bookmarks Bar", children: [
+          { id: "node-victim", parentId: BAR, title: "Victim", url: "javascript:evil()" },
+        ] },
+        { id: OTHER, title: "Other Bookmarks", children: [] },
+      ] },
+    ]);
+
+    const idMap = await IdMap.load();
+    await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
+
+    // No phantom mapping should have been created for the unsafe-URL remote entry.
+    expect(idMap.nodeForUlid(asUlid("evil-ulid"))).toBeUndefined();
   });
 
   it("treats a 404 on read as an empty remote and pushes local-only bookmarks", async () => {
@@ -140,7 +206,7 @@ describe("reconcile", () => {
     });
     const client = fakeClient({ read, write, update });
 
-    (chrome.bookmarks.getTree as any).mockResolvedValueOnce([
+    (browser.bookmarks.getTree as any).mockResolvedValueOnce([
       { id: "root", children: [
         { id: BAR, title: "Bookmarks Bar", children: [
           { id: "node-local", parentId: BAR, title: "Local", url: "https://local.example/" },

@@ -16,4 +16,7 @@ export default defineManifest({
     service_worker: "src/background.ts",
     type: "module",
   },
+  content_security_policy: {
+    extension_pages: "script-src 'self'; object-src 'self'; connect-src 'self' https://api.github.com",
+  },
 });
