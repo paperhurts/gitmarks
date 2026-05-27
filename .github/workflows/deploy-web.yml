@@ -1,0 +1,71 @@
+name: Deploy web UI to GitHub Pages
+
+on:
+  # Deploy on every push to main that touches the web package (or this workflow).
+  push:
+    branches: [main]
+    paths:
+      - "packages/web/**"
+      - "packages/core/**"
+      - ".github/workflows/deploy-web.yml"
+      - "pnpm-lock.yaml"
+  # Allow manual re-deploy from the Actions UI.
+  workflow_dispatch:
+
+# Least-privilege except for the Pages-specific permissions deploy-pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment can run at a time. If another commit lands while a
+# deploy is in flight, cancel the queued one and skip ahead — never queue
+# multiple concurrent deploys for the same env.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build core
+        run: pnpm --filter @gitmarks/core build
+
+      - name: Build web
+        run: pnpm --filter @gitmarks/web build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
