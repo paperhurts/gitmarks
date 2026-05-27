@@ -7,6 +7,7 @@ import type {
 } from "@gitmarks/core";
 import {
   addBookmark,
+  isSafeBookmarkUrl,
   newUlid,
   normalizeUrl,
   softDeleteBookmark,
@@ -247,6 +248,10 @@ function applyBatch(
   let file = initial;
   for (const event of batch) {
     if (event.kind === "create") {
+      if (!isSafeBookmarkUrl(event.url)) {
+        console.warn("[gitmarks] skipping create event with unsafe URL scheme", { url: event.url });
+        continue;
+      }
       // Skip if already mapped — a previous batch already created the remote entry;
       // treat duplicate create events as no-ops.
       const id = createUlids.get(event.nodeId);
@@ -276,6 +281,10 @@ function applyBatch(
       if (existing == null) continue;
       const patch: Partial<Omit<Bookmark, "id">> = {};
       if ("url" in event && event.url !== undefined) {
+        if (!isSafeBookmarkUrl(event.url)) {
+          console.warn("[gitmarks] skipping update event with unsafe URL scheme", { url: event.url });
+          continue;
+        }
         const normalized = normalizeUrl(event.url, { stripTrackingParams });
         if (normalized !== existing.url) patch.url = normalized;
       }

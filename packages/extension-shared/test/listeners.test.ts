@@ -443,6 +443,95 @@ describe("listeners", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("applyBatch skips create events with unsafe URL scheme", async () => {
+    let captured: BookmarksFile | null = null;
+    const update = vi.fn(async (_p: string, mutate: any) => {
+      captured = mutate({ version: 1, updated_at: "x", bookmarks: [] });
+      return { data: captured, sha: "s", etag: "" };
+    });
+    const client = fakeClient({ update });
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => IdMap.load(),
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const createListener = (browser.bookmarks.onCreated.addListener as any).mock.calls[0]![0];
+    // Fire two creates: one unsafe, one safe.
+    createListener("node-unsafe", {
+      id: "node-unsafe",
+      parentId: BAR,
+      title: "Evil",
+      url: "javascript:alert(1)",
+    });
+    createListener("node-safe", {
+      id: "node-safe",
+      parentId: BAR,
+      title: "Safe",
+      url: "https://safe.example/",
+    });
+
+    await flushPending();
+
+    // client.update must have been called (the safe bookmark survives)
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(captured).not.toBeNull();
+    const urls = captured!.bookmarks.map((b: any) => b.url);
+    expect(urls).toContain("https://safe.example/");
+    expect(urls).not.toContain("javascript:alert(1)");
+  });
+
+  it("applyBatch skips update events that set an unsafe URL", async () => {
+    let captured: BookmarksFile | null = null;
+    const safeBookmark = {
+      id: "existing-ulid",
+      url: "https://example.com/",
+      title: "Original",
+      folder: "",
+      tags: [],
+      added_at: "y",
+      updated_at: "y",
+      added_from: "chrome@other",
+      deleted_at: null,
+      notes: null,
+    };
+    const update = vi.fn(async (_p: string, mutate: any) => {
+      const initial: BookmarksFile = { version: 1, updated_at: "x", bookmarks: [safeBookmark] };
+      captured = mutate(initial);
+      return { data: captured, sha: "s", etag: "" };
+    });
+    const client = fakeClient({ update });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("existing-ulid"), asNodeId("node-existing"));
+
+    registerListeners({
+      getClient: async () => client,
+      getIdMap: async () => idMap,
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const changeListener = (browser.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    // User edits the bookmark URL to an unsafe value.
+    changeListener("node-existing", { url: "javascript:evil()" });
+
+    await flushPending();
+
+    // The update was skipped — client.update should not have been called because
+    // the only surviving event (the unsafe URL update) was dropped inside applyBatch.
+    // Either the event is filtered entirely (no call) OR the URL is absent from the result.
+    if (update.mock.calls.length > 0) {
+      expect(captured).not.toBeNull();
+      const bm = captured!.bookmarks[0]!;
+      expect(bm.url).not.toBe("javascript:evil()");
+      expect(bm.url).toBe("https://example.com/");
+    } else {
+      expect(update).not.toHaveBeenCalled();
+    }
+  });
+
   it("applies exponential backoff after a flush failure", async () => {
     const update = vi.fn();
     // Make the first flush fail
