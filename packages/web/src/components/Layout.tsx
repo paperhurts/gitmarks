@@ -14,13 +14,16 @@ interface Props {
   onExport?: () => void;
   onSignOut?: () => void;
   refreshing: boolean;
+  /** When true, disables the Sign out button so an in-flight write isn't
+   *  silently committed after the user signs out. */
+  busy?: boolean;
 }
 
 const navLinkBase = "px-3 py-1 rounded";
 const navLinkActive = "bg-fog text-cyan";
 const navLinkInactive = "text-cyan-soft hover:text-cyan";
 
-export function Layout({ children, status, onRefresh, onExport, onSignOut, refreshing }: Props) {
+export function Layout({ children, status, onRefresh, onExport, onSignOut, refreshing, busy }: Props) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-fog px-4 py-3 flex items-center gap-4">
@@ -67,7 +70,9 @@ export function Layout({ children, status, onRefresh, onExport, onSignOut, refre
             <button
               type="button"
               onClick={onSignOut}
-              className="px-3 py-1 rounded border border-magenta text-magenta hover:bg-magenta hover:text-ink"
+              disabled={busy === true}
+              title={busy === true ? "wait for the in-flight save to finish" : undefined}
+              className="px-3 py-1 rounded border border-magenta text-magenta hover:bg-magenta hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Sign out
             </button>

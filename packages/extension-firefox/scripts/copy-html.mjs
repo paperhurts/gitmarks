@@ -12,6 +12,12 @@ if (!existsSync(sharedHtmlDir)) {
 }
 mkdirSync(targetDir, { recursive: true });
 for (const file of ["popup.html", "options.html"]) {
-  copyFileSync(resolve(sharedHtmlDir, file), resolve(targetDir, file));
+  const src = resolve(sharedHtmlDir, file);
+  if (!existsSync(src)) {
+    throw new Error(
+      `shared html file not found: ${src} — expected to live in @gitmarks/extension-shared/src/`,
+    );
+  }
+  copyFileSync(src, resolve(targetDir, file));
 }
 console.log("[firefox] copied popup.html + options.html from extension-shared");

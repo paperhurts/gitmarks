@@ -16,6 +16,7 @@ export function TagsPage({ client }: Props) {
   const { bookmarksFile, tagsFile, loading, error, refresh, writeTags } = useGitmarksData(client);
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
 
   const status: LayoutStatus = loading
@@ -49,15 +50,18 @@ export function TagsPage({ client }: Props) {
 
   async function onMutate(mutator: (f: TagsFile) => TagsFile) {
     setWriteError(null);
+    setWriting(true);
     try {
       await writeTags(mutator, "web: update tags");
     } catch (err) {
       setWriteError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setWriting(false);
     }
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing} busy={writing}>
       <div data-testid="tags-page">
         {tagsFile != null && <TagManager tagsFile={tagsFile} onMutate={onMutate} />}
       </div>
