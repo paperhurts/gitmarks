@@ -17,7 +17,7 @@ export async function applyRemoteChanges(
 
       if (bm.deleted_at != null) {
         if (existingNode != null) {
-          suppress(bm.url);
+          if (isSafeBookmarkUrl(bm.url)) suppress(bm.url);
           try {
             await browser.bookmarks.remove(existingNode);
             idMap.removeByUlid(asUlid(bm.id));
@@ -80,12 +80,6 @@ async function applyRemoteEdit(
   remoteUrl: string,
   remoteTitle: string,
 ): Promise<void> {
-  if (!isSafeBookmarkUrl(remoteUrl)) {
-    console.warn("[gitmarks] skipping remote edit with unsafe URL scheme", {
-      nodeId, url: remoteUrl,
-    });
-    return;
-  }
   let current: Bookmarks.BookmarkTreeNode | undefined;
   try {
     const found = await browser.bookmarks.get(nodeId);

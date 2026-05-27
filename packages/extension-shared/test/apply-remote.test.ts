@@ -249,15 +249,18 @@ describe("applyRemoteChanges", () => {
     expect(urls.some((u) => u.startsWith("data:"))).toBe(false);
   });
 
-  it("skips a remote edit with an unsafe URL scheme", async () => {
+  it("outer URL guard short-circuits before reaching the edit branch for unsafe URL schemes", async () => {
+    // The outer guard at apply-remote.ts fires before applyRemoteEdit is
+    // reached, so browser.bookmarks.get (used inside applyRemoteEdit) is never
+    // called. This test makes that short-circuit explicit.
     const idMap = await IdMap.load();
-    // Pre-map u1 to an existing local node so applyRemoteChanges hits the edit branch.
+    // Pre-map u1 so applyRemoteChanges would normally hit the edit branch.
     idMap.set(asUlid("u1"), asNodeId("node-1"));
-    (browser.bookmarks.get as unknown as { mockResolvedValueOnce: (v: unknown) => void }).mockResolvedValueOnce([
-      { id: "node-1", title: "Old title", url: "https://example.com/old" },
-    ]);
     const bm = bookmark({ id: "u1", url: "javascript:alert(2)", title: "Evil edit" });
     await applyRemoteChanges(file([bm]), idMap, BAR, OTHER);
     expect(browser.bookmarks.update).not.toHaveBeenCalled();
+    // Confirm the outer guard fired before entering applyRemoteEdit:
+    // browser.bookmarks.get would have been called if applyRemoteEdit had run.
+    expect(browser.bookmarks.get).not.toHaveBeenCalled();
   });
 });
