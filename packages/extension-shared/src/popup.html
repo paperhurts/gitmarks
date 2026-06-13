@@ -34,9 +34,13 @@
         transition: background 0.12s, color 0.12s;
       }
       button:hover:not(:disabled) { background: #22d3ee; color: #0a0a0f; }
+      button + button { margin-top: 0.5rem; }
+      /* Secondary action ("Save all tabs") uses the web UI's magenta accent. */
+      button.secondary { border-color: #e879f9; color: #e879f9; }
+      button.secondary:hover:not(:disabled) { background: #e879f9; border-color: #e879f9; color: #0a0a0f; }
       button:disabled { opacity: 0.5; cursor: progress; }
       /* Success state: stays disabled (no re-save) but reads as done, not busy. */
-      button.done { opacity: 1; cursor: default; background: transparent; color: #22d3ee; }
+      button.done { opacity: 1; cursor: default; background: transparent; border-color: #22d3ee; color: #22d3ee; }
       #status { margin-top: 0.75rem; font-size: 0.85rem; min-height: 1.2em; }
       #status.ok { color: #22d3ee; }
       #status.err { color: #e879f9; }

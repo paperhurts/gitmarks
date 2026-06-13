@@ -1,4 +1,4 @@
-import type { SaveResult } from "./save-flow.js";
+import type { SaveResult, SaveAllTabsResult } from "./save-flow.js";
 
 /**
  * Apply the outcome of a popup save to the button + status line.
@@ -32,5 +32,36 @@ export function applySaveResult(
     status.textContent = result.message;
     saveBtn.disabled = false;
     saveBtn.textContent = "Try again";
+  }
+}
+
+/**
+ * Apply the outcome of a "save all tabs" batch to its button + status line.
+ * Mirrors applySaveResult, but the success line reports counts (saved, and
+ * how many were skipped as unsafe or duplicate). Issue #46.
+ */
+export function applySaveAllResult(
+  allBtn: HTMLButtonElement,
+  status: HTMLElement,
+  result: SaveAllTabsResult,
+  options: { closePopup?: () => void; closeDelayMs?: number } = {},
+): void {
+  const { closePopup = () => window.close(), closeDelayMs = 1200 } = options;
+  if (result.ok) {
+    status.className = "ok";
+    const skipped = result.skippedUnsafe + result.skippedDuplicate;
+    const tabWord = result.saved === 1 ? "tab" : "tabs";
+    status.textContent =
+      skipped > 0
+        ? `✓ saved ${result.saved} ${tabWord} (skipped ${skipped})`
+        : `✓ saved ${result.saved} ${tabWord}`;
+    allBtn.textContent = "Saved ✓";
+    allBtn.classList.add("done");
+    setTimeout(closePopup, closeDelayMs);
+  } else {
+    status.className = "err";
+    status.textContent = result.message;
+    allBtn.disabled = false;
+    allBtn.textContent = "Try again";
   }
 }

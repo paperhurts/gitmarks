@@ -71,6 +71,12 @@ version Chrome uses) need a manual check:
       prefix that the Chrome extension uses too. We may revisit this if
       cross-browser disambiguation matters; for now, all `added_from`
       values carry `chrome@` regardless of browser.)
+- [ ] **Save all tabs (issue #46):** open a few http(s) tabs plus an
+      `about:` tab, click the toolbar icon → **Save all tabs**. Status shows
+      `✓ saved N tabs` (http(s) only; `about:` and duplicate URLs skipped),
+      then auto-closes. One batched commit adds them under
+      `folder: "Session YYYY-MM-DD"`. The add-on now requests the `tabs`
+      permission (needed to read every tab's URL/title).
 
 **Native tree sync:**
 

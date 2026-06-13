@@ -12,6 +12,38 @@ export function addBookmark(
   };
 }
 
+/**
+ * Append many bookmarks in one pass, skipping any whose `url` already belongs
+ * to an existing **active** (non-tombstoned) bookmark, and de-duping within the
+ * incoming batch. Pure and replay-safe: pass pre-built bookmarks (fixed ULIDs)
+ * so re-running on a 409 retry against fresh state stays deterministic.
+ * Tombstoned URLs are not treated as duplicates, so a previously-deleted page
+ * can be re-saved.
+ */
+export function addBookmarks(
+  file: BookmarksFile,
+  bookmarks: Bookmark[],
+  nowIso: string,
+): BookmarksFile {
+  const seen = new Set(
+    file.bookmarks.filter((b) => b.deleted_at == null).map((b) => b.url),
+  );
+  const toAdd: Bookmark[] = [];
+  for (const bm of bookmarks) {
+    if (seen.has(bm.url)) continue;
+    seen.add(bm.url);
+    toAdd.push(bm);
+  }
+  if (toAdd.length === 0) {
+    return { ...file, updated_at: nowIso };
+  }
+  return {
+    ...file,
+    updated_at: nowIso,
+    bookmarks: [...file.bookmarks, ...toAdd],
+  };
+}
+
 export function updateBookmark(
   file: BookmarksFile,
   id: string,

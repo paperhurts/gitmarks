@@ -87,6 +87,19 @@ After loading the unpacked extension and completing first-run setup:
       Save another page → green "✓ saved", concurrent edit handled by
       the 409 retry-replay loop.
 
+**Save all tabs (issue #46):**
+- [ ] Open a few http(s) tabs plus a `chrome://` tab in one window. Click
+      the toolbar icon → **Save all tabs** (magenta button).
+- [ ] Status shows `✓ saved N tabs` (N = the http(s) tabs only; the
+      `chrome://` tab and any duplicate URLs are skipped, surfaced as
+      `(skipped M)`), then the popup auto-closes.
+- [ ] Refresh `bookmarks.json` on github.com — one batched commit adds all
+      N entries under `folder: "Session YYYY-MM-DD"`.
+- [ ] Click **Save all tabs** again in the same window → `✓ saved 0 tabs
+      (skipped N)` (all already present; dedupe by URL).
+- [ ] Note: installing now prompts for **"Read your browsing history"**
+      (the `tabs` permission, required to read every tab's URL/title).
+
 **Native tree sync (new in v0.2):**
 - [ ] Drag any URL to your Chrome bookmarks bar. Wait ~1 second.
       Refresh `bookmarks.json` on github.com — the entry appears with

@@ -8,6 +8,8 @@ export interface BuildBookmarkInput {
   nowIso: string;
   /** Strip tracking params (utm_, fbclid, gclid, etc.) at save time. Default false. */
   stripTrackingParams?: boolean;
+  /** Folder path to place the bookmark in (e.g. "Session 2026-06-13"). Default "" (root). */
+  folder?: string;
 }
 
 export function buildBookmark(input: BuildBookmarkInput): Bookmark {
@@ -20,7 +22,7 @@ export function buildBookmark(input: BuildBookmarkInput): Bookmark {
       stripTrackingParams: input.stripTrackingParams ?? false,
     }),
     title: input.title,
-    folder: "",
+    folder: input.folder ?? "",
     tags: [],
     added_at: input.nowIso,
     updated_at: input.nowIso,
