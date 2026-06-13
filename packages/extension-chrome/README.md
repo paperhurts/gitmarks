@@ -75,7 +75,9 @@ After loading the unpacked extension and completing first-run setup:
 - [ ] Enter valid creds and click **Validate** → green success.
 - [ ] Click **Save**. Reopen popup → "Save this page".
 - [ ] Navigate to any web page, click toolbar icon, **Save this page**
-      → green "✓ saved" within ~2 seconds.
+      → cyan "✓ saved" within ~2 seconds, then the popup auto-closes
+      after ~1.2s. (Popup uses the web UI palette: ink bg, cyan accents,
+      magenta wordmark.)
 - [ ] Refresh `bookmarks.json` on github.com — the new entry is there.
 - [ ] Save the same page again → second entry with a different ULID and
       same URL (dedupe is out of scope).
