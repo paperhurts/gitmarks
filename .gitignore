@@ -8,3 +8,5 @@ coverage/
 .turbo/
 test-results/
 playwright-report/
+.sid/
+.claude/
