@@ -3,6 +3,7 @@ import { GitHubClient } from "@gitmarks/core";
 import { loadSettings, SettingsCorruptError } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
 import { saveBookmark, type SaveResult } from "./lib/save-flow.js";
+import { applySaveResult } from "./lib/save-result-view.js";
 import type { LastErrorRecord } from "./lib/background-core.js";
 
 const root = document.getElementById("root");
@@ -104,18 +105,7 @@ async function render(): Promise<void> {
         message: err instanceof Error ? err.message : String(err),
       };
     }
-    if (result.ok) {
-      status.className = "ok";
-      status.textContent = "✓ saved";
-      // Auto-dismiss the popup shortly after a successful save so the user
-      // doesn't have to click away. No-op when opened as a plain page (e2e).
-      setTimeout(() => window.close(), 1200);
-    } else {
-      status.className = "err";
-      status.textContent = result.message;
-      saveBtn.disabled = false;
-      saveBtn.textContent = "Try again";
-    }
+    applySaveResult(saveBtn, status, result);
   });
 }
 
