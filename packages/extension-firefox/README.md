@@ -77,6 +77,9 @@ version Chrome uses) need a manual check:
       then auto-closes. One batched commit adds them under
       `folder: "Session YYYY-MM-DD"`. The add-on now requests the `tabs`
       permission (needed to read every tab's URL/title).
+- [ ] The popup footer shows **"Open web UI ↗"** on every state — clicking it
+      opens the companion web UI (https://paperhurts.github.io/gitmarks/) in a
+      new tab.
 
 **Native tree sync:**
 

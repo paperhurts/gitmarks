@@ -46,11 +46,22 @@
       #status.err { color: #e879f9; }
       .err { color: #e879f9; }
       .title { font-size: 0.85rem; color: #9ca3af; margin: 0 0 0.5rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      footer.weblink {
+        padding: 0.5rem 1rem 0.75rem;
+        border-top: 1px solid #23232e;
+        font-size: 0.8rem;
+      }
+      footer.weblink a { color: #67e8f9; text-decoration: none; }
+      footer.weblink a:hover { color: #22d3ee; text-decoration: underline; }
     </style>
   </head>
   <body>
     <header class="brand">gitmarks</header>
     <main id="root">loading…</main>
+    <!-- Always-present link to the companion web UI (read/search/manage). -->
+    <footer class="weblink">
+      <a href="https://paperhurts.github.io/gitmarks/" target="_blank" rel="noopener noreferrer">Open web UI ↗</a>
+    </footer>
     <script type="module" src="./popup.ts"></script>
   </body>
 </html>
