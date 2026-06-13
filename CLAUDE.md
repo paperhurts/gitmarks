@@ -129,8 +129,9 @@ pnpm --filter @gitmarks/extension-chrome e2e
 5. ✅ Web UI v1: list / search / tag management — issue [#24](https://github.com/paperhurts/gitmarks/issues/24)
 6. ✅ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
 7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
+8. ⬜ Bookmark all open tabs in one action (extension popup, batched single write, `tabs` permission) — issue [#46](https://github.com/paperhurts/gitmarks/issues/46)
 
-For next-piece-of-work: pick from the remaining open issues (#26 Safari). Each has a scope block in its issue description. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
+For next-piece-of-work: pick from the remaining open issues (#26 Safari, #46 bookmark-all-tabs). Each has a scope block in its issue description. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
 
 ## Non-goals (do not implement)
 
