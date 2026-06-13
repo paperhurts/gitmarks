@@ -100,6 +100,11 @@ After loading the unpacked extension and completing first-run setup:
 - [ ] Note: installing now prompts for **"Read your browsing history"**
       (the `tabs` permission, required to read every tab's URL/title).
 
+**Web UI link:**
+- [ ] The popup footer shows **"Open web UI ↗"** on every state — clicking it
+      opens the companion read/search/manage web UI
+      (https://paperhurts.github.io/gitmarks/) in a new tab.
+
 **Native tree sync (new in v0.2):**
 - [ ] Drag any URL to your Chrome bookmarks bar. Wait ~1 second.
       Refresh `bookmarks.json` on github.com — the entry appears with
