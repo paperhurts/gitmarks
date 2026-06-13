@@ -2,8 +2,13 @@ import browser from "webextension-polyfill";
 import { GitHubClient } from "@gitmarks/core";
 import { loadSettings, SettingsCorruptError } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
-import { saveBookmark, type SaveResult } from "./lib/save-flow.js";
-import { applySaveResult } from "./lib/save-result-view.js";
+import {
+  saveBookmark,
+  saveAllTabs,
+  type SaveResult,
+  type SaveAllTabsResult,
+} from "./lib/save-flow.js";
+import { applySaveResult, applySaveAllResult } from "./lib/save-result-view.js";
 import type { LastErrorRecord } from "./lib/background-core.js";
 
 const root = document.getElementById("root");
@@ -59,6 +64,7 @@ async function render(): Promise<void> {
   root!.innerHTML = `
     <p class="title" title="${escapeAttr(tab.title ?? tab.url)}">${escapeText(tab.title ?? tab.url)}</p>
     <button id="save">Save this page</button>
+    <button id="save-all" class="secondary">Save all tabs</button>
     <p id="status"></p>
   `;
 
@@ -75,7 +81,16 @@ async function render(): Promise<void> {
   }
 
   const saveBtn = document.getElementById("save") as HTMLButtonElement;
+  const saveAllBtn = document.getElementById("save-all") as HTMLButtonElement;
   const status = document.getElementById("status")!;
+
+  const makeClient = () =>
+    new GitHubClient({
+      owner: settings.owner,
+      repo: settings.repo,
+      token: settings.token,
+      branch: settings.branch,
+    });
 
   saveBtn.addEventListener("click", async () => {
     saveBtn.disabled = true;
@@ -85,14 +100,8 @@ async function render(): Promise<void> {
     let result: SaveResult;
     try {
       const machineId = await getMachineId();
-      const client = new GitHubClient({
-        owner: settings.owner,
-        repo: settings.repo,
-        token: settings.token,
-        branch: settings.branch,
-      });
       result = await saveBookmark(
-        client,
+        makeClient(),
         { url: tab.url!, title: tab.title ?? tab.url! },
         machineId,
         new Date().toISOString(),
@@ -106,6 +115,42 @@ async function render(): Promise<void> {
       };
     }
     applySaveResult(saveBtn, status, result);
+  });
+
+  saveAllBtn.addEventListener("click", async () => {
+    saveAllBtn.disabled = true;
+    saveAllBtn.textContent = "saving all…";
+    status.className = "";
+    status.textContent = "";
+    let result: SaveAllTabsResult;
+    try {
+      const machineId = await getMachineId();
+      // Reading every tab's url/title needs the "tabs" permission (declared in
+      // both manifests). currentWindow only — cross-window is out of scope.
+      const tabs = await browser.tabs.query({ currentWindow: true });
+      // Only real web pages. isSafeBookmarkUrl (the XSS guard) also allows
+      // chrome:/about:/extension schemes, but those aren't useful bookmarks —
+      // so restrict the batch to http(s) here. saveAllTabs still applies the
+      // safety guard as defense in depth.
+      const pages = tabs
+        .filter(
+          (t): t is browser.Tabs.Tab & { url: string } =>
+            t.url != null && /^https?:\/\//i.test(t.url),
+        )
+        .map((t) => ({ url: t.url, title: t.title ?? t.url }));
+      const nowIso = new Date().toISOString();
+      result = await saveAllTabs(makeClient(), pages, machineId, nowIso, {
+        stripTrackingParams: settings.stripTrackingParams,
+        folder: `Session ${nowIso.slice(0, 10)}`,
+      });
+    } catch (err) {
+      result = {
+        ok: false,
+        kind: "unknown",
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+    applySaveAllResult(saveAllBtn, status, result);
   });
 }
 

@@ -19,6 +19,7 @@ export { normalizeUrl, isSafeBookmarkUrl } from "./url.js";
 // Pure mutations
 export {
   addBookmark,
+  addBookmarks,
   updateBookmark,
   updateBookmarks,
   type BookmarkPatch,
