@@ -63,7 +63,8 @@ version Chrome uses) need a manual check:
 **Save flow:**
 
 - [ ] Navigate to any page, click the toolbar icon → "Save this page".
-      Green "✓ saved" within ~2s. Refresh `bookmarks.json` on
+      Cyan "✓ saved" within ~2s, then the popup auto-closes after ~1.2s
+      (popup uses the web UI palette). Refresh `bookmarks.json` on
       github.com — the new entry appears with `added_from: "chrome@<id>"`.
       (The `chrome@` prefix is intentional — the polyfill exposes the
       same `browser.*` namespace, but the machine-id helper writes the
