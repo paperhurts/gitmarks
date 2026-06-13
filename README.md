@@ -7,8 +7,9 @@ infrastructure to host. You own your data — it's just a file in a repo
 you control.
 
 **Status:** Chrome extension is functional end-to-end (save via toolbar
-button, two-way sync with the native bookmark tree, 5-min poll for remote
-changes, automatic conflict retry). Firefox MV3 add-on shipping the same
+button, save all open tabs in one action, two-way sync with the native
+bookmark tree, 5-min poll for remote changes, automatic conflict retry).
+Firefox MV3 add-on shipping the same
 source as Chrome via a shared package. Web UI (list, search, tag management,
 bulk operations, trash, Netscape HTML export, sign out) deploys as a static
 SPA. Safari is next in the roadmap. See `spec.md` for the full design.
@@ -16,6 +17,10 @@ SPA. Safari is next in the roadmap. See `spec.md` for the full design.
 ## Features (Chrome, today)
 
 - Save the current tab to GitHub via a toolbar button
+- **Save all open tabs** in the current window in one action — batched into a
+  single `bookmarks.json` write, grouped under a dated `Session YYYY-MM-DD`
+  folder, with exact-URL de-dupe and browser-internal tabs skipped
+- Open the companion **web UI** directly from the popup
 - Drag a URL to your Chrome bookmarks bar → it appears in `bookmarks.json`
   on GitHub within ~1 second
 - Edit a bookmark's title in Chrome → updates remote within ~1 second
@@ -26,15 +31,16 @@ SPA. Safari is next in the roadmap. See `spec.md` for the full design.
   on the next 5-minute poll
 - Concurrent edits from multiple devices reconcile automatically via
   GitHub's file SHA + optimistic retry-replay
-- 290 automated unit + component tests + 6 Playwright e2e (against real Chromium)
+- 306 automated unit + component tests + 6 Playwright e2e (against real Chromium)
 - Optional **tracking-param stripping** (utm_*, fbclid, gclid, etc.) at save time — opt-in via settings
+- Dark cyan/magenta themed popup + options pages, matching the web UI
 
 ## Packages
 
 | Package | Role |
 |---|---|
 | `@gitmarks/core` | Shared TypeScript library: schemas (Zod), GitHub Contents API client with optimistic concurrency, ULID + URL helpers, pure mutation helpers |
-| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 104 unit tests live here. |
+| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 115 unit tests live here. |
 | `@gitmarks/extension-chrome` | Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e. Thin entry files import from `extension-shared`. |
 | `@gitmarks/extension-firefox` | Firefox MV3 shell. Manifest + plain Vite build. Same source as Chrome via `extension-shared`. Load via `about:debugging`. |
 | `@gitmarks/web` | Static SPA — list, search, tag management, bulk operations, trash, Netscape HTML export, sign out. Vite + React + Tailwind. Talks directly to GitHub via `@gitmarks/core`. Deploys to GitHub Pages or Cloudflare Pages. |
@@ -149,6 +155,8 @@ The load-bearing invariants:
 - ✅ Firefox MV3 add-on ([#23](https://github.com/paperhurts/gitmarks/issues/23))
 - ✅ Web UI v1: list + search + tag management ([#24](https://github.com/paperhurts/gitmarks/issues/24))
 - ✅ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
+- ✅ Bookmark all open tabs in one action ([#46](https://github.com/paperhurts/gitmarks/issues/46))
+- ✅ Popup polish: web-UI theme, auto-dismiss after save, "Open web UI" link
 - ⬜ Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26))
 
 ## Files in this repo
