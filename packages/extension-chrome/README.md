@@ -20,8 +20,17 @@ Then in Chrome:
 3. Click **Load unpacked**.
 4. Select `packages/extension-chrome/dist/`.
 
-The extension's toolbar icon appears as a default puzzle piece (icons
-are deferred). Pin it for easy access.
+Pin the toolbar icon for easy access.
+
+**Other Chromium browsers (Brave, Edge, Opera, Vivaldi):** this same
+`dist/` loads unchanged — no separate build. Use the equivalent
+extensions page (`brave://extensions`, `edge://extensions`, …), enable
+Developer mode, and **Load unpacked** the same folder. Brave Shields
+don't affect the extension's own requests to `api.github.com` (those are
+extension-origin, not page content).
+
+The toolbar/extensions-page icon is generated from `assets/gitmarks.svg`
+at build time (see "Icons" below).
 
 ## First-run setup
 
@@ -243,5 +252,13 @@ user action. Filed and closed as #2.
 - Tracking-param URL stripping (`utm_*`) — tracked as #6
 - Folder-rename batching for thousands of bookmarks — closed as #7 (blocked on onMoved push handling)
 - Tags UI (tags live in the JSON but no UI here yet — web UI scope, #24/#25)
-- Icons (Chrome shows the default puzzle piece)
 - Conflict resolution beyond core's automatic 409/422 retry
+
+## Icons
+
+The toolbar button and extensions-page tile use icons generated from a
+single source: `assets/gitmarks.svg` at the repo root. The `prebuild`
+hook runs `scripts/gen-icons.mjs`, which rasterizes that SVG to
+16/32/48/128 px PNGs into `icons/` (git-ignored) and `@crxjs/vite-plugin`
+emits them into `dist/icons/`. To change the icon, edit (or replace)
+`assets/gitmarks.svg` and rebuild — no manifest changes needed.
