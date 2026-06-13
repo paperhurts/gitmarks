@@ -130,6 +130,7 @@ pnpm --filter @gitmarks/extension-chrome e2e
 6. ✅ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
 7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
 8. ⬜ Bookmark all open tabs in one action (extension popup, batched single write, `tabs` permission) — issue [#46](https://github.com/paperhurts/gitmarks/issues/46)
+9. ✅ Popup polish: auto-dismiss ~1.2s after a successful save (`setTimeout(window.close)`); restyle popup to the web UI palette (ink/cyan/magenta, mono font, magenta wordmark)
 
 For next-piece-of-work: pick from the remaining open issues (#26 Safari, #46 bookmark-all-tabs). Each has a scope block in its issue description. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
 
