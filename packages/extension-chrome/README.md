@@ -41,9 +41,11 @@ at build time (see "Icons" below).
 2. Click the toolbar icon → "Set up gitmarks" → enter PAT, owner, repo,
    branch.
 3. Optionally enable **"Strip tracking parameters"** to remove `utm_*`,
-   `fbclid`, `gclid`, `msclkid`, and `mc_*` from saved URLs. Default off
-   per the spec's open-question rationale (some sites use `utm_*` for
-   non-tracking purposes).
+   `fbclid`, `gclid`, `msclkid`, and `mc_*` from saved URLs. Links shared
+   from social posts or newsletters carry these; stripping them means the
+   same article saved from two sources collapses to one bookmark, not two.
+   Default off per the spec's open-question rationale (some sites use
+   `utm_*` for non-tracking purposes).
 4. Click **Validate**. You should see either
    "✓ valid PAT, repo exists, bookmarks.json found" or
    "✓ valid PAT, repo exists (bookmarks.json not yet created — will be on
