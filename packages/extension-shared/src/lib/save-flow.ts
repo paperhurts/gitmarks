@@ -8,6 +8,8 @@ import {
   GitHubError,
   GitHubNotFoundError,
   addBookmark,
+  addBookmarks,
+  isSafeBookmarkUrl,
 } from "@gitmarks/core";
 import { buildBookmark } from "./bookmark-factory.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
@@ -17,13 +19,27 @@ export interface PageInfo {
   title: string;
 }
 
-export type SaveResult =
-  | { ok: true; bookmark: Bookmark }
+export type SaveFailure = {
+  ok: false;
+  kind: "not_configured" | "auth" | "conflict" | "not_found" | "unknown";
+  message: string;
+};
+
+export type SaveResult = { ok: true; bookmark: Bookmark } | SaveFailure;
+
+/** Outcome of a "save all tabs" batch. `total` is the number of pages handed in. */
+export type SaveAllTabsResult =
   | {
-      ok: false;
-      kind: "not_configured" | "auth" | "conflict" | "not_found" | "unknown";
-      message: string;
-    };
+      ok: true;
+      /** Bookmarks actually appended (after unsafe-URL and duplicate skips). */
+      saved: number;
+      /** Pages dropped because their URL scheme isn't a safe bookmark scheme. */
+      skippedUnsafe: number;
+      /** Safe pages dropped because the URL already existed (or repeated in the batch). */
+      skippedDuplicate: number;
+      total: number;
+    }
+  | SaveFailure;
 
 export interface SaveOptions {
   stripTrackingParams?: boolean;
@@ -62,7 +78,71 @@ export async function saveBookmark(
   }
 }
 
-function classify(err: unknown): SaveResult {
+/**
+ * Save every page in `pages` (the current window's tabs) in one batched
+ * `bookmarks.json` write. Unsafe-scheme pages are skipped up front; the rest
+ * are de-duped by URL against existing active bookmarks (and within the batch)
+ * inside the mutator, so the count stays correct across a 409 replay. All
+ * saved bookmarks land in `opts.folder` (default root).
+ */
+export async function saveAllTabs(
+  client: GitHubClient,
+  pages: PageInfo[],
+  machineId: string,
+  nowIso: string,
+  opts: SaveOptions & { folder?: string } = {},
+): Promise<SaveAllTabsResult> {
+  const total = pages.length;
+  const safe = pages.filter((p) => isSafeBookmarkUrl(p.url));
+  const skippedUnsafe = total - safe.length;
+
+  const candidates = safe.map((p) =>
+    buildBookmark({
+      url: p.url,
+      title: p.title,
+      machineId,
+      nowIso,
+      folder: opts.folder ?? "",
+      ...(opts.stripTrackingParams !== undefined
+        ? { stripTrackingParams: opts.stripTrackingParams }
+        : {}),
+    }),
+  );
+
+  if (candidates.length === 0) {
+    return { ok: true, saved: 0, skippedUnsafe, skippedDuplicate: 0, total };
+  }
+
+  const commitMsg = `add ${candidates.length} bookmark(s) from open tabs (chrome@${machineId})`;
+  // Captured from the final (possibly replayed) mutator run — deterministic
+  // given the file state that actually committed, so the count is authoritative.
+  let saved = 0;
+  try {
+    await updateBookmarksOrBootstrap(
+      client,
+      (current) => {
+        const next = addBookmarks(current, candidates, nowIso);
+        saved = next.bookmarks.length - current.bookmarks.length;
+        return next;
+      },
+      commitMsg,
+      machineId,
+      nowIso,
+    );
+    return {
+      ok: true,
+      saved,
+      skippedUnsafe,
+      skippedDuplicate: candidates.length - saved,
+      total,
+    };
+  } catch (err) {
+    console.error("[gitmarks] saveAllTabs failed", err);
+    return classify(err);
+  }
+}
+
+function classify(err: unknown): SaveFailure {
   if (err instanceof GitHubAuthError) {
     return { ok: false, kind: "auth", message: err.message };
   }

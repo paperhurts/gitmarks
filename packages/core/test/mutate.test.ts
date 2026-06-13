@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { BookmarksFile, Bookmark } from "../src/schema/bookmarks.js";
 import {
   addBookmark,
+  addBookmarks,
   updateBookmark,
   softDeleteBookmark,
   gcTombstones,
@@ -43,6 +44,63 @@ describe("addBookmark", () => {
     expect(out.updated_at).toBe("2026-05-23T00:00:00Z");
     expect(out).not.toBe(file);
     expect(file.bookmarks).toEqual([]);
+  });
+});
+
+describe("addBookmarks", () => {
+  it("appends many and bumps updated_at", () => {
+    const file = mkFile();
+    const a = mkBookmark({ id: "a", url: "https://a.com/" });
+    const b = mkBookmark({ id: "b", url: "https://b.com/" });
+    const out = addBookmarks(file, [a, b], "2026-05-23T00:00:00Z");
+
+    expect(out.bookmarks).toEqual([a, b]);
+    expect(out.updated_at).toBe("2026-05-23T00:00:00Z");
+    expect(file.bookmarks).toEqual([]); // input not mutated
+  });
+
+  it("skips candidates whose URL already exists (active)", () => {
+    const existing = mkBookmark({ id: "x", url: "https://a.com/" });
+    const file = mkFile([existing]);
+    const dup = mkBookmark({ id: "a", url: "https://a.com/" });
+    const fresh = mkBookmark({ id: "b", url: "https://b.com/" });
+
+    const out = addBookmarks(file, [dup, fresh], "2026-05-23T00:00:00Z");
+
+    expect(out.bookmarks.map((b) => b.id)).toEqual(["x", "b"]);
+  });
+
+  it("de-dupes within the incoming batch (first wins)", () => {
+    const first = mkBookmark({ id: "1", url: "https://a.com/" });
+    const second = mkBookmark({ id: "2", url: "https://a.com/" });
+    const out = addBookmarks(mkFile(), [first, second], "2026-05-23T00:00:00Z");
+
+    expect(out.bookmarks.map((b) => b.id)).toEqual(["1"]);
+  });
+
+  it("does NOT treat a tombstoned URL as a duplicate (allows re-save)", () => {
+    const deleted = mkBookmark({
+      id: "old",
+      url: "https://a.com/",
+      deleted_at: "2026-05-02T00:00:00Z",
+    });
+    const file = mkFile([deleted]);
+    const fresh = mkBookmark({ id: "new", url: "https://a.com/" });
+
+    const out = addBookmarks(file, [fresh], "2026-05-23T00:00:00Z");
+
+    expect(out.bookmarks.map((b) => b.id)).toEqual(["old", "new"]);
+  });
+
+  it("bumps updated_at but appends nothing when all are duplicates", () => {
+    const existing = mkBookmark({ url: "https://a.com/" });
+    const file = mkFile([existing]);
+    const dup = mkBookmark({ id: "dup", url: "https://a.com/" });
+
+    const out = addBookmarks(file, [dup], "2026-05-23T00:00:00Z");
+
+    expect(out.bookmarks).toEqual([existing]);
+    expect(out.updated_at).toBe("2026-05-23T00:00:00Z");
   });
 });
 
