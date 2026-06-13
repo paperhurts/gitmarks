@@ -4,15 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node ./scripts/copy-html.mjs",
+    "predev": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
     "dev": "vite build --watch --mode development",
-    "prebuild": "node ./scripts/copy-html.mjs",
+    "prebuild": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
     "build": "vite build",
     "pretypecheck": "node ./scripts/copy-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "pree2e": "node ./scripts/copy-html.mjs && vite build",
+    "pree2e": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs && vite build",
     "e2e": "playwright test",
-    "pree2e:headed": "node ./scripts/copy-html.mjs && vite build",
+    "pree2e:headed": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs && vite build",
     "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
