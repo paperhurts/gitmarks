@@ -47,8 +47,9 @@ version Chrome uses) need a manual check:
 **Load + popup:**
 
 - [ ] Build, load via `about:debugging` → "Load Temporary Add-on", select
-      `dist/manifest.json`. The gitmarks toolbar icon appears as a default
-      puzzle piece (pin it for easy access).
+      `dist/manifest.json`. The gitmarks toolbar icon (generated from
+      `assets/gitmarks.svg` at build time) appears; pin it for easy
+      access.
 - [ ] Click the icon before configuring → popup shows "Set up gitmarks".
 
 **Setup flow:**

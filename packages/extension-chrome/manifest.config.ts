@@ -7,9 +7,21 @@ export default defineManifest({
   description: "Save bookmarks to your own GitHub repo.",
   permissions: ["storage", "activeTab", "bookmarks", "alarms"],
   host_permissions: ["https://api.github.com/*"],
+  icons: {
+    16: "icons/icon-16.png",
+    32: "icons/icon-32.png",
+    48: "icons/icon-48.png",
+    128: "icons/icon-128.png",
+  },
   action: {
     default_popup: "src/popup.html",
     default_title: "gitmarks",
+    default_icon: {
+      16: "icons/icon-16.png",
+      32: "icons/icon-32.png",
+      48: "icons/icon-48.png",
+      128: "icons/icon-128.png",
+    },
   },
   options_page: "src/options.html",
   background: {
