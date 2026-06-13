@@ -5,7 +5,7 @@ export default defineManifest({
   name: "gitmarks",
   version: "0.0.1",
   description: "Save bookmarks to your own GitHub repo.",
-  permissions: ["storage", "activeTab", "bookmarks", "alarms"],
+  permissions: ["storage", "activeTab", "tabs", "bookmarks", "alarms"],
   host_permissions: ["https://api.github.com/*"],
   icons: {
     16: "icons/icon-16.png",
