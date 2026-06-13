@@ -10,3 +10,6 @@ test-results/
 playwright-report/
 .sid/
 .claude/
+
+# Local-only planning artifacts — superpowers plans must never be committed.
+docs/superpowers/
