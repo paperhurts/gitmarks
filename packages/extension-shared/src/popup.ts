@@ -107,6 +107,9 @@ async function render(): Promise<void> {
     if (result.ok) {
       status.className = "ok";
       status.textContent = "✓ saved";
+      // Auto-dismiss the popup shortly after a successful save so the user
+      // doesn't have to click away. No-op when opened as a plain page (e2e).
+      setTimeout(() => window.close(), 1200);
     } else {
       status.className = "err";
       status.textContent = result.message;
