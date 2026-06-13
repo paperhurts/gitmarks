@@ -35,6 +35,8 @@
       }
       button:hover:not(:disabled) { background: #22d3ee; color: #0a0a0f; }
       button:disabled { opacity: 0.5; cursor: progress; }
+      /* Success state: stays disabled (no re-save) but reads as done, not busy. */
+      button.done { opacity: 1; cursor: default; background: transparent; color: #22d3ee; }
       #status { margin-top: 0.75rem; font-size: 0.85rem; min-height: 1.2em; }
       #status.ok { color: #22d3ee; }
       #status.err { color: #e879f9; }
