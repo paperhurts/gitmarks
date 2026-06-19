@@ -122,9 +122,14 @@ After loading the unpacked extension and completing first-run setup:
       `chrome://extensions/`, find gitmarks, click "service worker"
       → "Inspect views: service worker". In the DevTools console run
       `chrome.alarms.create("gitmarks:poll", { when: Date.now() + 1000 })`.
-- [ ] Restart Chrome. On cold start, gitmarks runs initial reconciliation
-      if more than an hour has elapsed since the last one — bookmarks
-      added on another device get pulled in.
+- [ ] **Import existing bookmarks on setup (issue #54):** with bookmarks
+      already in Chrome, complete first-run setup. Within a few seconds (no
+      restart needed), refresh `bookmarks.json` on github.com — your existing
+      bookmarks are pushed up in one batched commit (`storage.onChanged` fires
+      reconcile when settings are saved).
+- [ ] Restart Chrome. On startup gitmarks reconciles again (and
+      `runtime.onStartup`/`onInstalled` also trigger it) — bookmarks added on
+      another device get pulled in.
 
 ## Architecture notes
 
@@ -136,8 +141,12 @@ After loading the unpacked extension and completing first-run setup:
   minutes. The poll reads `bookmarks.json` with `If-None-Match` (304s
   cost nothing against the rate limit); on changes, the new entries
   are inserted into the native tree via `chrome.bookmarks.create`.
-- **Cold start:** the service worker runs `reconcile()` if
-  `gitmarks:lastReconciledAt` is missing or older than an hour. Reconcile
+- **Reconcile triggers:** the service worker runs `reconcile()` on
+  `storage.onChanged` for the settings key (setup completed / repo switched —
+  forced immediately so existing bookmarks import without a restart), on
+  `runtime.onInstalled` / `runtime.onStartup`, and on top-level eval. The
+  eval/startup paths honor a staleness guard (`gitmarks:lastReconciledAt`
+  missing or older than an hour). Reconcile
   walks both sides, links existing bookmarks by URL, pushes local-only
   to remote, pulls remote-only to local.
 

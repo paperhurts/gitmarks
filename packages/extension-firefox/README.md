@@ -83,6 +83,10 @@ version Chrome uses) need a manual check:
 
 **Native tree sync:**
 
+- [ ] **Import existing bookmarks on setup (issue #54):** with bookmarks
+      already in Firefox, complete setup — within a few seconds (no restart),
+      `bookmarks.json` on GitHub gains them in one batched commit (reconcile
+      fires on `storage.onChanged` when settings are saved).
 - [ ] Drag any URL to the bookmarks toolbar. Within ~1 second the entry
       appears in `bookmarks.json` on GitHub.
 - [ ] Right-click the bookmark in Firefox → Edit → change the title.

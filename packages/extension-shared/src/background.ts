@@ -1,12 +1,17 @@
 import browser from "webextension-polyfill";
 import { GitHubClient } from "@gitmarks/core";
-import { loadSettings, type Settings } from "./lib/settings.js";
+import { loadSettings, type Settings, SETTINGS_KEY } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
 import { IdMap } from "./lib/id-mapping.js";
 import { reconcile } from "./lib/reconcile.js";
 import { registerListeners } from "./lib/listeners.js";
 import { applyRemoteChanges } from "./lib/apply-remote.js";
-import { runMaybeReconcile, runPollRemoteOnce, toEtag } from "./lib/background-core.js";
+import {
+  runMaybeReconcile,
+  runPollRemoteOnce,
+  toEtag,
+  isSettingsChange,
+} from "./lib/background-core.js";
 
 const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
 const POLL_ALARM_NAME = "gitmarks:poll";
@@ -117,5 +122,24 @@ browser.alarms.onAlarm.addListener((alarm) => {
     void pollRemoteOnce();
   }
 });
+
+// Reconcile when settings are saved (setup completed or repo switched) so the
+// user's existing bookmarks import within seconds, instead of waiting for the
+// next cold-start. Registered at top level so the SW wakes for this event even
+// when terminated. Clearing the staleness stamp forces the run (and makes a
+// repo switch re-import); loadSettings() returns null on sign-out, so
+// maybeReconcile no-ops safely when settings are cleared.
+browser.storage.onChanged.addListener((changes, areaName) => {
+  if (!isSettingsChange(areaName, changes, SETTINGS_KEY)) return;
+  void (async () => {
+    await browser.storage.local.remove(RECONCILED_AT_KEY);
+    await maybeReconcile();
+  })();
+});
+
+// Explicit lifecycle triggers — more reliable than relying solely on top-level
+// evaluation. onInstalled fires on install/update; onStartup on browser launch.
+browser.runtime.onInstalled.addListener(() => void maybeReconcile());
+browser.runtime.onStartup.addListener(() => void maybeReconcile());
 
 void maybeReconcile();

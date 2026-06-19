@@ -9,6 +9,7 @@ import {
   runMaybeReconcile,
   runPollRemoteOnce,
   toEtag,
+  isSettingsChange,
 } from "../src/lib/background-core.js";
 
 const RECONCILE_INTERVAL_MS = 60 * 60 * 1000;
@@ -19,6 +20,31 @@ function fakeStorage() {
   const remove = vi.fn(async (_key: string) => {});
   return { set, remove };
 }
+
+describe("isSettingsChange", () => {
+  const KEY = "gitmarks:settings";
+
+  it("is true when the settings key changes in local storage", () => {
+    expect(isSettingsChange("local", { [KEY]: { newValue: {} } }, KEY)).toBe(true);
+  });
+
+  it("is false for non-local areas", () => {
+    expect(isSettingsChange("sync", { [KEY]: { newValue: {} } }, KEY)).toBe(false);
+    expect(isSettingsChange("managed", { [KEY]: { newValue: {} } }, KEY)).toBe(false);
+  });
+
+  it("is false when only other keys change (no self-trigger loop)", () => {
+    expect(
+      isSettingsChange("local", { "gitmarks:lastReconciledAt": { newValue: 1 } }, KEY),
+    ).toBe(false);
+    expect(isSettingsChange("local", {}, KEY)).toBe(false);
+  });
+
+  it("is true on sign-out (settings key removed)", () => {
+    // onChanged still reports the key (with oldValue, no newValue) on remove.
+    expect(isSettingsChange("local", { [KEY]: { oldValue: {} } }, KEY)).toBe(true);
+  });
+});
 
 describe("runMaybeReconcile", () => {
   it("returns early when within the reconcile interval", async () => {

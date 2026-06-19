@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Five packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), example fixtures. 82 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 115 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 119 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+ for MV3 SW parity. Load via `about:debugging` → "Load Temporary Add-on".
 - `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 109 unit + component tests.
 
-Total: 306 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
+Total: 310 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
 
 Pending packages (in dependency order): Safari.
 
@@ -54,7 +54,7 @@ The public API is curated via `src/index.ts` (21 exports). Anything not exported
 
 Cross-browser source — owns all popup, options, background, and `src/lib/` modules. Both browser shells import from here via the `exports` map (`./background`, `./popup`, `./options`). Uses `browser.*` via `webextension-polyfill`. No framework — vanilla HTML+TS.
 
-- **Service worker** (`src/background.ts`): registers `browser.bookmarks.*` listeners, creates the periodic poll alarm, runs initial reconciliation on cold start when stale.
+- **Service worker** (`src/background.ts`): registers `browser.bookmarks.*` listeners, creates the periodic poll alarm, and triggers reconciliation from several top-level-registered events so it actually runs when needed: `storage.onChanged` on the settings key (setup completed / repo switched — clears the staleness stamp and reconciles immediately so existing bookmarks import without a restart), `runtime.onInstalled`, `runtime.onStartup`, and top-level eval. `runMaybeReconcile`'s 1-hour staleness guard still applies to the eval/startup paths. (Earlier versions only reconciled on cold-start eval, so existing bookmarks never imported after setup — see issue #54.)
 - **Pure libs** (`src/lib/`):
   - `settings.ts` — Zod-validated `browser.storage.local` wrapper
   - `machine-id.ts` — 8-char Crockford base32 ID, persisted

@@ -1,7 +1,7 @@
 import browser from "webextension-polyfill";
 import { z } from "zod";
 
-const SETTINGS_KEY = "gitmarks:settings";
+export const SETTINGS_KEY = "gitmarks:settings";
 
 export const settingsSchema = z.object({
   token: z.string().min(1, "token required"),
