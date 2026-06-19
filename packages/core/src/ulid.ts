@@ -1,20 +1,42 @@
-import { factory, type PRNG } from "ulid";
+// Minimal ULID generator: 48-bit millisecond timestamp + 80 bits of randomness,
+// Crockford base32, 26 chars, lexicographically sortable by creation time.
+//
+// We deliberately do NOT use the `ulid` npm package. Its module top level runs
+// `export const ulid = factory()`, which eagerly probes for a secure PRNG and
+// THROWS "secure crypto unusable, insecure Math.random not allowed" under
+// crxjs's MV3 service-worker bundling — the throw fires the moment the module is
+// imported, crashing service-worker registration (so reconcile/listeners/poll
+// never run; see issue #57). Implementing it here against the Web Crypto API
+// (present in the SW, extension pages, the web UI, and Node 19+) avoids that
+// fragile environment detection entirely.
 
-// ulid()'s built-in environment detection (detectPrng/detectRoot) throws
-// "secure crypto unusable, insecure Math.random not allowed" in the MV3
-// service-worker context under crxjs bundling — which crashes SW registration
-// entirely (background reconcile/listeners/poll never run). Bind the PRNG
-// explicitly to the Web Crypto API instead. crypto.getRandomValues is present
-// in service workers, extension pages (popup/options), the web UI, and Node
-// 19+, so ULID generation works everywhere and never falls back to Math.random.
-const cryptoPrng: PRNG = () => {
-  const bytes = new Uint8Array(1);
+const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford base32 (no I, L, O, U)
+const ENCODING_LEN = ENCODING.length; // 32
+const TIME_LEN = 10;
+const RANDOM_LEN = 16;
+
+function encodeTime(nowMs: number): string {
+  let now = nowMs;
+  let str = "";
+  for (let i = 0; i < TIME_LEN; i++) {
+    const mod = now % ENCODING_LEN;
+    str = ENCODING[mod]! + str;
+    now = Math.floor(now / ENCODING_LEN);
+  }
+  return str;
+}
+
+function encodeRandom(): string {
+  const bytes = new Uint8Array(RANDOM_LEN);
   crypto.getRandomValues(bytes);
-  return bytes[0]! / 0xff;
-};
-
-const generateUlid = factory(cryptoPrng);
+  let str = "";
+  // 256 is an exact multiple of 32, so `byte % 32` is uniform (no modulo bias).
+  for (let i = 0; i < RANDOM_LEN; i++) {
+    str += ENCODING[bytes[i]! % ENCODING_LEN]!;
+  }
+  return str;
+}
 
 export function newUlid(): string {
-  return generateUlid();
+  return encodeTime(Date.now()) + encodeRandom();
 }

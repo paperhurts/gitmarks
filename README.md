@@ -51,7 +51,7 @@ SPA. Safari is next in the roadmap. See `spec.md` for the full design.
 - **No server, ever** — clients talk to the GitHub REST API directly; your data
   is a `bookmarks.json` / `tags.json` pair in your own private repo, with git
   history as the audit log
-- 310 automated unit + component tests + 6 Playwright e2e (against real Chromium)
+- 311 automated unit + component tests + 6 Playwright e2e (against real Chromium)
 
 ## Packages
 
@@ -89,6 +89,30 @@ Chrome: Bookmarks → *Import bookmarks and settings*), then the extension syncs
 those into the repo exactly as above. The web UI's **Export** produces this same
 Netscape format, so it round-trips.
 
+## Creating your GitHub token (PAT)
+
+gitmarks authenticates to GitHub with a **fine-grained personal access token**
+scoped to *only* your bookmarks repo. To create one:
+
+1. First, create a **private** repo on github.com to hold your bookmarks
+   (e.g. `my-bookmarks`). It can be empty — gitmarks creates `bookmarks.json`
+   on first save.
+2. Go to **https://github.com/settings/personal-access-tokens/new** (github.com
+   → your avatar → **Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token**).
+3. **Token name:** anything (e.g. `gitmarks`). Set an **Expiration** you're
+   comfortable with.
+4. **Repository access:** select **Only select repositories** → pick your
+   bookmarks repo *only*.
+5. **Permissions → Repository permissions → Contents:** set to **Read and
+   write**. (That's the only permission needed; leave everything else default.)
+6. Click **Generate token** and copy it (`github_pat_…`) — you won't see it
+   again. Paste it into the extension's setup screen.
+
+Why fine-grained + single-repo: if your browser profile is ever compromised,
+the token only unlocks your bookmarks repo, not your whole GitHub account. See
+[Your data, your PAT](#your-data-your-pat) for storage and revocation details.
+
 ## Quick start (Chrome extension)
 
 ```bash
@@ -100,8 +124,8 @@ Then in Chrome:
 1. `chrome://extensions/` → toggle **Developer mode** on
 2. **Load unpacked** → select `packages/extension-chrome/dist/`
 3. Click the toolbar icon → "Set up gitmarks"
-4. Paste a fine-grained PAT (Contents: read/write scope on your bookmarks
-   repo), enter owner/repo/branch, click **Save**
+4. Paste your fine-grained PAT (see [Creating your GitHub token](#creating-your-github-token-pat)),
+   enter owner/repo/branch, click **Save**
 
 See `packages/extension-chrome/README.md` for the full setup walkthrough,
 the manual smoke test checklist, and architecture notes.
