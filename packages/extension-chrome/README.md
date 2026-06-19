@@ -22,6 +22,14 @@ Then in Chrome:
 
 Pin the toolbar icon for easy access.
 
+**After changing code:** re-run the build, then on `chrome://extensions/` click
+the **reload ↻** icon on the gitmarks card to pick up the new `dist/`. A plain
+reload is enough for source changes; if you changed `manifest.config.ts`
+(e.g. permissions), remove the extension and **Load unpacked** again so Chrome
+re-prompts for the new permissions. After a reconcile-affecting change, re-save
+your settings in the options page (or restart the browser) to re-trigger the
+initial import.
+
 **Other Chromium browsers (Brave, Edge, Opera, Vivaldi):** this same
 `dist/` loads unchanged — no separate build. Use the equivalent
 extensions page (`brave://extensions`, `edge://extensions`, …), enable
