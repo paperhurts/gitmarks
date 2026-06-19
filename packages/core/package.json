@@ -19,7 +19,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "ulid": "^2.3.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
