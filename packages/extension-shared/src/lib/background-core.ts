@@ -48,6 +48,21 @@ export interface StorageOps {
   removeStorage: (key: StorageKey) => Promise<void>;
 }
 
+// True when a chrome.storage.onChanged event represents a change to the
+// settings record in local storage — i.e. the user just completed setup or
+// switched repos. Used to trigger an immediate reconcile (import existing
+// bookmarks) instead of waiting for the next service-worker cold start.
+export function isSettingsChange(
+  areaName: string,
+  changes: Record<string, unknown>,
+  settingsKey: string,
+): boolean {
+  return (
+    areaName === "local" &&
+    Object.prototype.hasOwnProperty.call(changes, settingsKey)
+  );
+}
+
 export interface ReconcileDeps extends StorageOps {
   now: number;
   lastReconciledAt: number;
