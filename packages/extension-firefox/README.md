@@ -21,6 +21,11 @@ For permanent installation you'd need to sign with AMO (deferred per
 `spec.md` — ship as developer-mode unpacked first; do AMO review later
 if usage justifies it).
 
+**After changing code:** re-run the build, then on `about:debugging` → **This
+Firefox** click **Reload** on the gitmarks add-on to pick up the new `dist/`.
+After a reconcile-affecting change, re-save your settings in the options page
+(or restart Firefox) to re-trigger the initial import.
+
 ## First-run setup
 
 Identical to Chrome — see `packages/extension-chrome/README.md`
