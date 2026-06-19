@@ -14,33 +14,51 @@ source as Chrome via a shared package. Web UI (list, search, tag management,
 bulk operations, trash, Netscape HTML export, sign out) deploys as a static
 SPA. Safari is next in the roadmap. See `spec.md` for the full design.
 
-## Features (Chrome, today)
+## Features
 
-- Save the current tab to GitHub via a toolbar button
-- **Save all open tabs** in the current window in one action — batched into a
-  single `bookmarks.json` write, grouped under a dated `Session YYYY-MM-DD`
-  folder, with exact-URL de-dupe and browser-internal tabs skipped
-- Open the companion **web UI** directly from the popup
-- Drag a URL to your Chrome bookmarks bar → it appears in `bookmarks.json`
-  on GitHub within ~1 second
-- Edit a bookmark's title in Chrome → updates remote within ~1 second
-- Delete a bookmark in Chrome → soft-deleted (tombstoned) remotely;
-  garbage-collected from the JSON after 30 days but retained in git
-  history forever
-- Edit `bookmarks.json` directly on GitHub → changes pull into Chrome
-  on the next 5-minute poll
-- Concurrent edits from multiple devices reconcile automatically via
-  GitHub's file SHA + optimistic retry-replay
-- 306 automated unit + component tests + 6 Playwright e2e (against real Chromium)
-- Optional **tracking-param stripping** (utm_*, fbclid, gclid, etc.) at save time — opt-in via settings
+### Browser extension (Chrome + Firefox)
+
+- **Save the current tab** to GitHub via the toolbar button
+- **Save all open tabs** in the current window in one action — one batched
+  `bookmarks.json` write, grouped under a dated `Session YYYY-MM-DD` folder,
+  with exact-URL de-dupe and browser-internal tabs skipped
+- **Imports your existing browser bookmarks** automatically when you finish
+  setup (also on browser startup and repo switch) — see
+  [Importing existing bookmarks](#importing-existing-bookmarks)
+- **Two-way native bookmark-tree sync:**
+  - Drag/add a bookmark in the browser → appears in `bookmarks.json` within ~1s
+  - Edit a bookmark's title → remote updates within ~1s
+  - Delete a bookmark → soft-deleted (tombstone); GC'd from the JSON after 30
+    days but retained in git history forever
+- **Remote → local pull:** edits made directly on GitHub (or from another
+  device) pull into the browser on a 5-minute poll
+- **Automatic conflict resolution** via GitHub's file SHA + optimistic retry-replay
+- **Optional tracking-param stripping** (utm_*, fbclid, gclid, …) at save time — opt-in
+- **One-click link to the web UI** from the popup
 - Dark cyan/magenta themed popup + options pages, matching the web UI
+
+### Web UI (static SPA — https://paperhurts.github.io/gitmarks/)
+
+- **List + full-text search** across title, URL, tags, and notes
+- **Tag management:** rename, recolor, add, delete
+- **Bulk operations:** multi-select → add/remove tag, set folder, soft-delete
+- **Trash** with restore (30-day soft-delete window)
+- **Netscape HTML export** — a standard bookmarks file you can re-import anywhere
+- **Sign out** — clears your PAT/settings from this machine's local storage
+
+### Foundation
+
+- **No server, ever** — clients talk to the GitHub REST API directly; your data
+  is a `bookmarks.json` / `tags.json` pair in your own private repo, with git
+  history as the audit log
+- 310 automated unit + component tests + 6 Playwright e2e (against real Chromium)
 
 ## Packages
 
 | Package | Role |
 |---|---|
 | `@gitmarks/core` | Shared TypeScript library: schemas (Zod), GitHub Contents API client with optimistic concurrency, ULID + URL helpers, pure mutation helpers |
-| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 115 unit tests live here. |
+| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 119 unit tests live here. |
 | `@gitmarks/extension-chrome` | Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e. Thin entry files import from `extension-shared`. |
 | `@gitmarks/extension-firefox` | Firefox MV3 shell. Manifest + plain Vite build. Same source as Chrome via `extension-shared`. Load via `about:debugging`. |
 | `@gitmarks/web` | Static SPA — list, search, tag management, bulk operations, trash, Netscape HTML export, sign out. Vite + React + Tailwind. Talks directly to GitHub via `@gitmarks/core`. Deploys to GitHub Pages or Cloudflare Pages. |
@@ -53,6 +71,23 @@ The read-side web UI is auto-deployed to GitHub Pages:
 You'll need a fine-grained PAT (see "Your data, your PAT" below) and your
 own private bookmarks repo. The web UI runs entirely in your browser — no
 server sees your token.
+
+## Importing existing bookmarks
+
+**From the browser you're installing into — automatic.** When you finish setup,
+the extension reconciles your existing native bookmark tree against the repo and
+pushes everything not already there into `bookmarks.json` in one batched write
+(unsafe-scheme URLs skipped, deduped by URL). This also runs on browser startup
+and when you change the configured repo. (No banner/error in the popup means it
+succeeded or hasn't run yet; if bookmarks are missing, open the popup to check
+for a background-sync error.)
+
+**From a bookmarks export file (Netscape HTML)** — there's no direct file
+importer yet. The simplest path is to import the HTML into your browser first
+(Firefox: `Ctrl+Shift+O` → Import and Backup → *Import Bookmarks from HTML*;
+Chrome: Bookmarks → *Import bookmarks and settings*), then the extension syncs
+those into the repo exactly as above. The web UI's **Export** produces this same
+Netscape format, so it round-trips.
 
 ## Quick start (Chrome extension)
 
