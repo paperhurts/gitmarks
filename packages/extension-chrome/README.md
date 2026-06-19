@@ -223,6 +223,21 @@ pnpm --filter @gitmarks/extension-shared test
 
 # Browser e2e (Playwright + real Chromium with extension loaded) is Chrome-only
 pnpm --filter @gitmarks/extension-chrome e2e
+```
+
+**Service-worker health + real round-trip e2e:**
+- `e2e/sw-health.spec.ts` loads the extension and asserts the **service worker
+  actually registers** (it created the poll alarm). This guards against the
+  class of bug in #57, where the SW crashed on load and the whole background
+  silently never ran.
+- `e2e/reconcile-roundtrip.spec.ts` is a true end-to-end against GitHub: it adds
+  a native bookmark, completes setup, and asserts the live SW writes it to
+  `bookmarks.json` in the repo. It **skips** unless you provide credentials in
+  `e2e/.env.e2e` (see `e2e/.env.example`) — a **throwaway** private repo + a
+  fine-grained PAT scoped to only that repo (Contents: read/write). Revoke it
+  when done.
+
+```bash
 
 # Type checking — both packages
 pnpm --filter @gitmarks/extension-shared typecheck
