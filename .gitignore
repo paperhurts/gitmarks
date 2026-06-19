@@ -11,5 +11,10 @@ playwright-report/
 .sid/
 .claude/
 
+# Secrets — e2e test credentials (throwaway-repo PAT). Never commit.
+.env
+.env.*
+!.env.example
+
 # Local-only planning artifacts — superpowers plans must never be committed.
 docs/superpowers/
