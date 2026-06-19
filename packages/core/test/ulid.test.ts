@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { newUlid } from "../src/ulid.js";
 
 describe("newUlid", () => {
@@ -18,5 +18,15 @@ describe("newUlid", () => {
     await new Promise((r) => setTimeout(r, 2));
     const b = newUlid();
     expect([b, a].sort()).toEqual([a, b]);
+  });
+
+  // Regression: ulid()'s env auto-detection threw "secure crypto unusable…" and
+  // crashed the MV3 service worker. We now bind the PRNG to Web Crypto, so
+  // newUlid must work without ulid touching the global environment.
+  it("uses Web Crypto and never hits the insecure-PRNG throw path", () => {
+    const spy = vi.spyOn(globalThis.crypto, "getRandomValues");
+    expect(() => newUlid()).not.toThrow();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
