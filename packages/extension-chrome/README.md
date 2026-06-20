@@ -105,8 +105,11 @@ After loading the unpacked extension and completing first-run setup:
       N entries under `folder: "Session YYYY-MM-DD"`.
 - [ ] Click **Save all tabs** again in the same window → `✓ saved 0 tabs
       (skipped N)` (all already present; dedupe by URL).
-- [ ] Note: installing now prompts for **"Read your browsing history"**
-      (the `tabs` permission, required to read every tab's URL/title).
+- [ ] First click of **Save all tabs** triggers a one-time permission prompt
+      ("Read your browsing history" — the optional `tabs` permission, needed to
+      read every tab's URL/title). Granting it from a popup may close the popup;
+      click **Save all tabs** again and it proceeds. The **install** prompt does
+      NOT ask for this (it's an optional, on-demand permission).
 
 **Web UI link:**
 - [ ] The popup footer shows **"Open web UI ↗"** on every state — clicking it
