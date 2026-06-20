@@ -3,9 +3,13 @@ import { defineManifest } from "@crxjs/vite-plugin";
 export default defineManifest({
   manifest_version: 3,
   name: "gitmarks",
-  version: "0.0.1",
-  description: "Save bookmarks to your own GitHub repo.",
-  permissions: ["storage", "activeTab", "tabs", "bookmarks", "alarms"],
+  version: "1.0.0",
+  description: "Save bookmarks to your own GitHub repo. No server, no account — your data is a file in a repo you control.",
+  homepage_url: "https://github.com/paperhurts/gitmarks",
+  permissions: ["storage", "activeTab", "bookmarks", "alarms"],
+  // "tabs" is requested on demand (only when the user clicks "Save all tabs"),
+  // so the install prompt doesn't warn about reading browsing history.
+  optional_permissions: ["tabs"],
   host_permissions: ["https://api.github.com/*"],
   icons: {
     16: "icons/icon-16.png",
