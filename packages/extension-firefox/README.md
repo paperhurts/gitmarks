@@ -129,7 +129,7 @@ lives in `@gitmarks/extension-shared`:
 packages/
 ├── core/                        # GitHub client, schemas, mutations
 ├── extension-shared/            # cross-browser source (this is the brain)
-│   ├── src/background.ts        # SW: listeners + alarm + reconcile
+│   ├── src/background.ts        # background (Firefox: event page): listeners + alarm + reconcile
 │   ├── src/popup.ts             # popup UI + popup-direct save flow
 │   ├── src/options.ts           # PAT/repo/branch + strip-tracking-params
 │   └── src/lib/                 # 12 pure-ish modules
