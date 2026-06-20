@@ -118,6 +118,19 @@ async function render(): Promise<void> {
   });
 
   saveAllBtn.addEventListener("click", async () => {
+    // Reading every tab's url/title needs the "tabs" permission, which is
+    // *optional* (kept out of the install prompt). Request it on this user
+    // gesture the first time. Requesting from a popup can close the popup when
+    // the prompt appears; if so the grant still sticks, and the next click sees
+    // it already granted and proceeds.
+    if (!(await browser.permissions.contains({ permissions: ["tabs"] }))) {
+      const granted = await browser.permissions.request({ permissions: ["tabs"] });
+      if (!granted) {
+        status.className = "err";
+        status.textContent = "Allow tab access to save all tabs.";
+        return;
+      }
+    }
     saveAllBtn.disabled = true;
     saveAllBtn.textContent = "saving all…";
     status.className = "";
@@ -125,8 +138,7 @@ async function render(): Promise<void> {
     let result: SaveAllTabsResult;
     try {
       const machineId = await getMachineId();
-      // Reading every tab's url/title needs the "tabs" permission (declared in
-      // both manifests). currentWindow only — cross-window is out of scope.
+      // currentWindow only — cross-window is out of scope.
       const tabs = await browser.tabs.query({ currentWindow: true });
       // Only real web pages. isSafeBookmarkUrl (the XSS guard) also allows
       // chrome:/about:/extension schemes, but those aren't useful bookmarks —

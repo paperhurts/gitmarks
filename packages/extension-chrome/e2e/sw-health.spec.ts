@@ -27,4 +27,13 @@ test.describe("service worker health", () => {
       )
       .toContain("gitmarks:poll");
   });
+
+  // The install prompt must NOT warn about reading browsing history: "tabs" is
+  // an optional permission requested on demand by "Save all tabs" (#61 store
+  // prep). Guard against it slipping back into the required install set.
+  test("does not request 'tabs' at install (it is optional, on-demand)", async ({ serviceWorker }) => {
+    const manifest = await serviceWorker.evaluate(() => chrome.runtime.getManifest());
+    expect(manifest.permissions ?? []).not.toContain("tabs");
+    expect(manifest.optional_permissions ?? []).toContain("tabs");
+  });
 });

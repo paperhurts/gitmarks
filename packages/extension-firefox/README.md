@@ -80,8 +80,9 @@ version Chrome uses) need a manual check:
       `about:` tab, click the toolbar icon → **Save all tabs**. Status shows
       `✓ saved N tabs` (http(s) only; `about:` and duplicate URLs skipped),
       then auto-closes. One batched commit adds them under
-      `folder: "Session YYYY-MM-DD"`. The add-on now requests the `tabs`
-      permission (needed to read every tab's URL/title).
+      `folder: "Session YYYY-MM-DD"`. The first click prompts for the optional
+      `tabs` permission on demand (needed to read every tab's URL/title); it is
+      NOT requested at install time.
 - [ ] The popup footer shows **"Open web UI ↗"** on every state — clicking it
       opens the companion web UI (https://paperhurts.github.io/gitmarks/) in a
       new tab.
