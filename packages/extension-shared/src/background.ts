@@ -6,6 +6,7 @@ import { IdMap } from "./lib/id-mapping.js";
 import { reconcile } from "./lib/reconcile.js";
 import { registerListeners } from "./lib/listeners.js";
 import { applyRemoteChanges } from "./lib/apply-remote.js";
+import { findRootIds } from "./lib/bookmark-roots.js";
 import {
   runMaybeReconcile,
   runPollRemoteOnce,
@@ -28,17 +29,10 @@ async function getBarOtherIds(): Promise<{ bar: string; other: string }> {
   const tree = await browser.bookmarks.getTree();
   const root = tree[0];
   if (root?.children == null) {
-    throw new Error("unexpected chrome.bookmarks tree shape");
+    throw new Error("unexpected bookmarks tree shape");
   }
-  let bar: string | null = null;
-  let other: string | null = null;
-  for (const child of root.children) {
-    if (child.id === "1") bar = child.id;
-    else if (child.id === "2") other = child.id;
-  }
-  if (bar == null || other == null) {
-    throw new Error("could not find Bookmarks Bar (id=1) or Other Bookmarks (id=2) in tree");
-  }
+  // Cross-browser: Chrome uses ids "1"/"2", Firefox uses "toolbar_____"/"unfiled_____".
+  const { bar, other } = findRootIds(root.children);
   cachedBarId = bar;
   cachedOtherId = other;
   return { bar, other };
