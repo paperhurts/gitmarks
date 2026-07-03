@@ -9,6 +9,7 @@ import {
   type SaveAllTabsResult,
 } from "./lib/save-flow.js";
 import { applySaveResult, applySaveAllResult } from "./lib/save-result-view.js";
+import { requestTabsPermission } from "./lib/tabs-permission.js";
 import type { LastErrorRecord } from "./lib/background-core.js";
 
 const root = document.getElementById("root");
@@ -119,17 +120,20 @@ async function render(): Promise<void> {
 
   saveAllBtn.addEventListener("click", async () => {
     // Reading every tab's url/title needs the "tabs" permission, which is
-    // *optional* (kept out of the install prompt). Request it on this user
-    // gesture the first time. Requesting from a popup can close the popup when
-    // the prompt appears; if so the grant still sticks, and the next click sees
-    // it already granted and proceeds.
-    if (!(await browser.permissions.contains({ permissions: ["tabs"] }))) {
-      const granted = await browser.permissions.request({ permissions: ["tabs"] });
-      if (!granted) {
-        status.className = "err";
-        status.textContent = "Allow tab access to save all tabs.";
-        return;
-      }
+    // *optional* (kept out of the install prompt). requestTabsPermission()
+    // must stay the FIRST statement here — Firefox voids the user-input
+    // gesture across `await`s and rejects permissions.request() outside a
+    // gesture (issue #68). Requesting from a popup can close the popup when
+    // the prompt appears; if so the grant still sticks, and the next click
+    // sees it already granted (request resolves true, no prompt) and proceeds.
+    const perm = await requestTabsPermission();
+    if (!perm.granted) {
+      status.className = "err";
+      status.textContent =
+        perm.error != null
+          ? `Tab access failed: ${perm.error}`
+          : "Allow tab access to save all tabs.";
+      return;
     }
     saveAllBtn.disabled = true;
     saveAllBtn.textContent = "saving all…";
