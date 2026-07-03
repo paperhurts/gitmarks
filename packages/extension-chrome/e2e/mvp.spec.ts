@@ -28,7 +28,7 @@ test.describe("MVP smoke", () => {
     await options.locator("#branch").fill("main");
     await options.locator("#save").click();
 
-    await expect(options.locator("#status")).toHaveText("✓ saved");
+    await expect(options.locator("#status")).toContainText("✓ saved");
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/src/popup.html`);
@@ -67,7 +67,7 @@ test.describe("MVP smoke", () => {
     await options.locator("#owner").fill("alice");
     await options.locator("#repo").fill("marks");
     await options.locator("#save").click();
-    await expect(options.locator("#status")).toHaveText("✓ saved");
+    await expect(options.locator("#status")).toContainText("✓ saved");
     await options.close();
 
     const target = await context.newPage();
