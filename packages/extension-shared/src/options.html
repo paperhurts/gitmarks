@@ -49,14 +49,65 @@
       #status { margin-top: 1rem; font-size: 0.9rem; min-height: 1.2em; }
       #status.ok { color: #22d3ee; }
       #status.err { color: #e879f9; }
+      a { color: #22d3ee; }
+      a:hover { color: #67e8f9; }
+      details.guide {
+        border: 1px solid #23232e;
+        border-radius: 6px;
+        background: #16161e;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.5rem;
+      }
+      details.guide summary {
+        cursor: pointer;
+        color: #e879f9;
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+      }
+      details.guide ol { padding-left: 1.25rem; margin: 0.75rem 0 0.25rem; }
+      details.guide li { margin-bottom: 0.85rem; font-size: 0.85rem; line-height: 1.5; }
+      details.guide li:last-child { margin-bottom: 0.25rem; }
+      details.guide .sub { color: #9ca3af; font-size: 0.8rem; margin: 0.25rem 0 0; line-height: 1.5; }
+      .field-hint { font-size: 0.75rem; color: #9ca3af; margin-top: 0.3rem; line-height: 1.45; }
     </style>
   </head>
   <body>
     <h1>gitmarks settings</h1>
 
+    <details class="guide" id="setup-guide">
+      <summary>First-time setup — two things to create on GitHub</summary>
+      <ol>
+        <li>
+          <a href="https://github.com/new?name=bookmarks&visibility=private&description=My+bookmarks%2C+synced+by+gitmarks" target="_blank" rel="noreferrer">Create a private repo</a>
+          to hold your bookmarks (the link pre-fills it).
+          <p class="sub">
+            Any repo works — bookmarks live in a <code>bookmarks.json</code> gitmarks
+            creates on first save, so an existing repo is fine too.
+          </p>
+        </li>
+        <li>
+          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a fine-grained access token</a>
+          scoped to just that repo:
+          <p class="sub">
+            Repository access → <b>Only select repositories</b> → your bookmarks repo.<br />
+            Permissions → Repository permissions → <b>Contents: Read and write</b>. Nothing else.<br />
+            When the token expires, generate a new one and paste it below.
+          </p>
+        </li>
+        <li>
+          Paste the token below with your GitHub login and repo name, then
+          <b>Validate</b> and <b>Save</b>.
+        </li>
+      </ol>
+    </details>
+
     <label>
       <span>GitHub fine-grained personal access token</span>
-      <input id="token" type="password" autocomplete="off" spellcheck="false" />
+      <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" />
+      <p class="field-hint">
+        Stored only in this browser's extension storage and sent only to
+        api.github.com — there is no gitmarks server.
+      </p>
     </label>
 
     <label>
