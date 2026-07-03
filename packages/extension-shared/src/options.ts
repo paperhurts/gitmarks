@@ -1,4 +1,3 @@
-import browser from "webextension-polyfill";
 import {
   GitHubClient,
   GitHubAuthError,
@@ -21,6 +20,7 @@ const stripTrackingParamsInput = $<HTMLInputElement>("stripTrackingParams");
 const validateBtn = $<HTMLButtonElement>("validate");
 const saveBtn = $<HTMLButtonElement>("save");
 const status = $<HTMLParagraphElement>("status");
+const setupGuide = $<HTMLDetailsElement>("setup-guide");
 
 function readForm(): Settings {
   return {
@@ -53,7 +53,11 @@ async function loadIntoForm(): Promise<void> {
     }
     throw err;
   }
-  if (s == null) return;
+  if (s == null) {
+    // First run: no settings yet — walk the user through repo + PAT creation.
+    setupGuide.open = true;
+    return;
+  }
   tokenInput.value = s.token;
   ownerInput.value = s.owner;
   repoInput.value = s.repo;
@@ -108,7 +112,8 @@ validateBtn.addEventListener("click", async () => {
 saveBtn.addEventListener("click", async () => {
   try {
     await saveSettings(readForm());
-    setStatus("✓ saved", "ok");
+    setupGuide.open = false;
+    setStatus("✓ saved — click the gitmarks icon on any page to save it", "ok");
   } catch (err) {
     console.error("[gitmarks] save settings failed", err);
     setStatus(err instanceof Error ? err.message : String(err), "err");

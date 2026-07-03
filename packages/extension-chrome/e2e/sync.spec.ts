@@ -37,7 +37,7 @@ async function configureExtension(
   await options.locator("#owner").fill("alice");
   await options.locator("#repo").fill("marks");
   await options.locator("#save").click();
-  await expect(options.locator("#status")).toHaveText("✓ saved");
+  await expect(options.locator("#status")).toContainText("✓ saved");
   await options.close();
 }
 
