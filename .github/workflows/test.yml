@@ -44,3 +44,38 @@ jobs:
 
       - name: Build everything
         run: pnpm build
+
+  # Real-browser gate: loads the built extension into a headed Chromium and
+  # asserts the service worker actually boots (poll alarm created) plus the
+  # mocked popup/options/native-sync flows. Exists because unit-green has
+  # repeatedly masked a dead-in-browser extension (#57, #64, #68) — CI was
+  # unit tests + build only, so those merged. The live-GitHub round-trip
+  # spec self-skips here (no e2e/.env.e2e in CI).
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build core
+        run: pnpm --filter @gitmarks/core build
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @gitmarks/extension-chrome exec playwright install --with-deps chromium
+
+      # The extension fixtures launch Chromium headed (extensions don't load
+      # headless), so wrap in a virtual display.
+      - name: Browser e2e
+        run: xvfb-run --auto-servernum -- pnpm --filter @gitmarks/extension-chrome e2e
