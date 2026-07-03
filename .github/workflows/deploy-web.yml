@@ -7,6 +7,7 @@ on:
     paths:
       - "packages/web/**"
       - "packages/core/**"
+      - "docs/privacy-policy.md"
       - ".github/workflows/deploy-web.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploy from the Actions UI.
