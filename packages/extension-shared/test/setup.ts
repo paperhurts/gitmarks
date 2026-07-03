@@ -60,6 +60,9 @@ const chromeStub = {
   tabs: {
     query: vi.fn(),
   },
+  permissions: {
+    request: vi.fn(async () => true),
+  },
 };
 
 vi.stubGlobal("chrome", chromeStub);
