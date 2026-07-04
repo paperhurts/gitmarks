@@ -9,7 +9,8 @@ Positioning: developers + the privacy / own-your-data crowd.
 `gitmarks`
 
 ## Category
-Productivity
+- Chrome Web Store: Productivity (subcategory Tools)
+- Firefox AMO: Bookmarks + Privacy & Security (AMO has no Productivity category)
 
 ## Summary (Chrome: ≤132 chars)
 > Sync bookmarks to your own private GitHub repo. No server, no account, no tracking — your data is a file you control.
@@ -85,8 +86,20 @@ gitmarks is for people who want to *own* their bookmarks.
 - Used for creditworthiness / lending? **No.**
 - We certify compliance with the Developer Program Policies.
 
-Privacy policy URL: `https://paperhurts.github.io/gitmarks/privacy-policy.html`
-(host `docs/privacy-policy.md` on GitHub Pages — see below).
+Privacy policy URL: `https://paperhurts.github.io/gitmarks/privacy.html`
+(rendered from `docs/privacy-policy.md` on every Pages deploy — see
+`packages/web/scripts/build-privacy.mjs`).
+
+## Data-type disclosures (actual store answers, 2026-07)
+
+- **CWS data-usage checkboxes**: `Web history` (bookmark/tab URLs + titles are
+  transmitted to the user's own repo) and `Authentication information` (the PAT
+  is stored locally and sent to api.github.com with each request). All three
+  certifications checked (no sale/transfer, no unrelated use, no
+  creditworthiness use). Remote code: **No** (MV3, fully bundled).
+- **AMO manifest `data_collection_permissions`**: `required: ["bookmarksInfo"]`
+  (see #73/#75 — Mozilla counts "transferred outside the local browser" as
+  collection even when the destination is the user's own repo).
 
 ---
 
@@ -98,8 +111,6 @@ Privacy policy URL: `https://paperhurts.github.io/gitmarks/privacy-policy.html`
   the wordmark + tagline "Bookmarks that live in your Git repo").
 
 ## Hosting the privacy policy
-`docs/privacy-policy.md` needs to be reachable at a public URL. Options:
-1. Render it into the existing GitHub Pages site as `privacy-policy.html`, or
-2. Link to the rendered Markdown on GitHub:
-   `https://github.com/paperhurts/gitmarks/blob/main/docs/privacy-policy.md`
-   (acceptable to both stores, but a Pages URL looks more official).
+✅ Done — live at `https://paperhurts.github.io/gitmarks/privacy.html`,
+rendered from `docs/privacy-policy.md` by the web package's postbuild step
+on every Pages deploy (#72).
