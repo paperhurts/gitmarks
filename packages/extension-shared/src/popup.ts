@@ -62,12 +62,18 @@ async function render(): Promise<void> {
     return;
   }
 
+  // Static template only — the tab title is set via textContent below so no
+  // dynamic value ever reaches innerHTML (AMO flags any interpolated
+  // innerHTML, issue #75).
   root!.innerHTML = `
-    <p class="title" title="${escapeAttr(tab.title ?? tab.url)}">${escapeText(tab.title ?? tab.url)}</p>
+    <p class="title"></p>
     <button id="save">Save this page</button>
     <button id="save-all" class="secondary">Save all tabs</button>
     <p id="status"></p>
   `;
+  const titleEl = root!.querySelector<HTMLParagraphElement>(".title")!;
+  titleEl.textContent = tab.title ?? tab.url;
+  titleEl.title = tab.title ?? tab.url;
 
   const errStored = await browser.storage.local.get("gitmarks:lastError");
   const lastErr = errStored["gitmarks:lastError"] as LastErrorRecord | undefined;
@@ -168,17 +174,6 @@ async function render(): Promise<void> {
     }
     applySaveAllResult(saveAllBtn, status, result);
   });
-}
-
-function escapeText(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function escapeAttr(s: string): string {
-  return escapeText(s).replace(/"/g, "&quot;");
 }
 
 render().catch((err) => {
