@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gitmarks — Privacy Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #0c0a14;
+    color: #e8e4f0;
+    font: 400 19px/1.65 'Crimson Pro', serif;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(180,74,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(0,229,255,0.05) 0%, transparent 60%);
+    min-height: 100vh;
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(180,74,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(180,74,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+  .wrap { position: relative; max-width: 780px; margin: 0 auto; padding: 0 24px 80px; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 28px 0; }
+  .wordmark { font: 700 20px/1 'Crimson Pro', serif; letter-spacing: -0.02em; color: #e8e4f0; text-decoration: none; }
+  .wordmark span { color: #00e5ff; text-shadow: 0 0 20px rgba(0,229,255,0.4); }
+  .navlinks { display: flex; gap: 28px; font: 500 15px/1 'Crimson Pro', serif; }
+  .navlinks a { color: #8a839b; text-decoration: none; }
+  .navlinks a:hover { color: #00e5ff; }
+  .kicker { font: 500 14px/1 'JetBrains Mono', monospace; color: #ff006e; text-transform: uppercase; letter-spacing: 0.12em; margin: 70px 0 20px; }
+  h1 { font: 600 52px/1.08 'Crimson Pro', serif; letter-spacing: -0.02em; margin: 0 0 10px; text-wrap: pretty; }
+  h1 em { font-style: normal; color: #00e5ff; text-shadow: 0 0 40px rgba(0,229,255,0.35); }
+  .updated { font: 400 14px/1 'JetBrains Mono', monospace; color: #8a839b; margin-bottom: 44px; }
+  h2 { font: 600 30px/1.2 'Crimson Pro', serif; letter-spacing: -0.01em; margin: 48px 0 14px; color: #e8e4f0; }
+  p { margin: 0 0 16px; color: #b8b2c6; }
+  strong { color: #e8e4f0; font-weight: 600; }
+  a { color: #00e5ff; text-decoration: none; }
+  a:hover { opacity: 0.8; }
+  ul { margin: 0 0 16px; padding-left: 24px; color: #b8b2c6; }
+  li { margin-bottom: 8px; }
+  li::marker { color: #b44aff; }
+  code { font: 500 0.78em/1 'JetBrains Mono', monospace; background: #13111d; border: 1px solid rgba(180,74,255,0.2); border-radius: 6px; padding: 3px 7px; color: #00e5ff; white-space: nowrap; }
+  .summary { background: #13111d; border: 1px solid rgba(0,229,255,0.25); border-radius: 18px; padding: 26px 30px; margin: 0 0 8px; box-shadow: 0 0 30px rgba(0,229,255,0.06); }
+  .summary p { margin: 0; font-size: 21px; color: #e8e4f0; }
+  table { width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 16px; }
+  th { font: 500 13px/1.4 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; color: #b44aff; text-align: left; padding: 10px 14px; border-bottom: 1px solid rgba(180,74,255,0.3); }
+  td { padding: 12px 14px; border-bottom: 1px solid rgba(180,74,255,0.12); color: #b8b2c6; vertical-align: top; }
+  .footer { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 80px; padding-top: 24px; border-top: 1px solid rgba(180,74,255,0.15); font: 400 13px/1 'JetBrains Mono', monospace; color: #8a839b; }
+  .footer a { color: #8a839b; }
+  .footer a:hover { color: #00e5ff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <a class="wordmark" href="https://paperhurts.dev">paperhurts<span>*</span></a>
+    <div class="navlinks">
+      <a href="https://paperhurts.github.io/gitmarks/">Web UI</a>
+      <a href="https://github.com/paperhurts/gitmarks">Source</a>
+    </div>
+  </div>
+  <div class="kicker">Privacy policy</div>
+  <h1>gitmarks <em>collects nothing.</em></h1>
+  <div class="updated">Last updated: 2026-06-19</div>
+
+  <div class="summary"><p><strong>There is no gitmarks server.</strong> No backend, no database, no analytics — we never receive your data. Your bookmarks live in a GitHub repository you own and control, your token and settings stay on your device, and the extension talks to only one network host: <code>api.github.com</code>.</p></div>
+
+  <p style="margin-top:24px">gitmarks is a serverless browser extension and web app for syncing your bookmarks to <strong>your own private GitHub repository</strong>. This policy explains what data it handles and where that data goes.</p>
+
+  <h2>What data gitmarks handles, and where it goes</h2>
+  <table>
+    <tr><th>Data</th><th>Where it's stored</th><th>Who can see it</th></tr>
+    <tr><td>Your bookmarks (<code>bookmarks.json</code>, <code>tags.json</code>)</td><td>Your private GitHub repo</td><td>You (and GitHub, as your repo host)</td></tr>
+    <tr><td>Your GitHub personal access token (PAT)</td><td>Locally — <code>chrome.storage.local</code> (extension) / <code>localStorage</code> (web app)</td><td>Anyone with access to your unlocked browser profile</td></tr>
+    <tr><td>Settings (repo owner/name/branch, options)</td><td>Locally, same as above</td><td>Same as above</td></tr>
+    <tr><td>Bookmark/tab URLs and titles</td><td>Read from your browser, written to your repo</td><td>You</td></tr>
+  </table>
+  <p>gitmarks does <strong>not</strong> collect, transmit to the developer, sell, or share any of this data. It is never sent anywhere except the GitHub API, on your behalf, authenticated with your own token.</p>
+
+  <h2>Permissions and why they're needed</h2>
+  <ul>
+    <li><code>storage</code> — save your settings and a local id map on your device.</li>
+    <li><code>bookmarks</code> — read and write your browser's native bookmark tree to keep it in sync with your repo.</li>
+    <li><code>alarms</code> — schedule a periodic (5-minute) check for remote changes.</li>
+    <li><code>activeTab</code> — read the current tab's URL and title when you click "Save this page".</li>
+    <li><code>tabs</code> (optional, requested only when you click "Save all tabs") — read the URLs and titles of the open tabs in the current window so they can be saved together. Not requested at install time.</li>
+    <li>Host access to <code>api.github.com</code> — read and write your bookmark files in your repo.</li>
+  </ul>
+
+  <h2>Third parties</h2>
+  <p>The only third party involved is <strong>GitHub</strong>, because your bookmarks are stored in your GitHub repository and all requests go to the GitHub API. Your use of GitHub is governed by <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub's Privacy Statement</a>. gitmarks uses no analytics, advertising, tracking, or other third-party services.</p>
+
+  <h2>Your control</h2>
+  <ul>
+    <li><strong>Revoke access at any time</strong> by deleting the fine-grained token in GitHub → Settings → Developer settings → Personal access tokens.</li>
+    <li><strong>Remove local data</strong> by clicking "Sign out" in the web app, or uninstalling the extension (which clears its local storage on that device). Uninstalling does <strong>not</strong> revoke the token on GitHub — delete it there as above.</li>
+    <li><strong>Delete your data</strong> by deleting the bookmark files or the repository on GitHub.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>gitmarks is a developer tool and is not directed to children under 13.</p>
+
+  <h2>Changes</h2>
+  <p>Material changes to this policy will be reflected in this file in the public repository, with an updated date above.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or concerns: open an issue at <a href="https://github.com/paperhurts/gitmarks/issues">github.com/paperhurts/gitmarks/issues</a>.</p>
+
+  <div class="footer">
+    <span>© 2026 paperhurts LLC</span>
+    <a href="https://github.com/paperhurts/gitmarks/issues">Questions? Open an issue ↗</a>
+  </div>
+</div>
+</body>
+</html>
