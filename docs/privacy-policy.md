@@ -1,3 +1,7 @@
+<!-- The hosted copy of this policy is packages/web/public/privacy.html
+     (served at /privacy.html by the Pages deploy — the URL store listings
+     point at). When editing this file, make the same change there. -->
+
 # gitmarks — Privacy Policy
 
 _Last updated: 2026-06-19_
