@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup help
+    url: https://github.com/paperhurts/gitmarks#install
+    about: The install section covers the repo + token setup the extension needs.
+  - name: Privacy policy
+    url: https://paperhurts.github.io/gitmarks/privacy.html
+    about: What data gitmarks handles and where it goes (spoiler — only to your own repo).

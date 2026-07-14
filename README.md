@@ -1,18 +1,31 @@
 # gitmarks
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/blbacnlfkoloenlhniiplljdmcefikhc?label=Chrome%20Web%20Store&color=22d3ee)](https://chromewebstore.google.com/detail/blbacnlfkoloenlhniiplljdmcefikhc)
+[![Firefox Add-ons](https://img.shields.io/amo/v/gitmarks?label=Firefox%20Add-ons&color=e879f9)](https://addons.mozilla.org/firefox/addon/gitmarks/)
+
 Serverless cross-browser bookmark sync. Bookmarks live as a JSON file in
 **your own private GitHub repo**; browser extensions and a web UI both talk
 directly to the GitHub Contents API. No server, no backend, no
 infrastructure to host. You own your data — it's just a file in a repo
 you control.
 
-**Status:** Chrome extension is functional end-to-end (save via toolbar
-button, save all open tabs in one action, two-way sync with the native
-bookmark tree, 5-min poll for remote changes, automatic conflict retry).
-Firefox MV3 add-on shipping the same
-source as Chrome via a shared package. Web UI (list, search, tag management,
-bulk operations, trash, Netscape HTML export, sign out) deploys as a static
-SPA. Safari is next in the roadmap. See `spec.md` for the full design.
+## Install
+
+- **Chrome:** [Chrome Web Store](https://chromewebstore.google.com/detail/blbacnlfkoloenlhniiplljdmcefikhc)
+- **Firefox:** [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/gitmarks/)
+- **Web UI:** [paperhurts.github.io/gitmarks](https://paperhurts.github.io/gitmarks/) — nothing to install
+
+You'll need a GitHub account, a private repo, and a fine-grained personal
+access token scoped to that repo (Contents: read/write) — the extension's
+options page walks you through all of it in a couple of minutes.
+
+**Status:** v1.0.0, published on the Chrome Web Store and Firefox AMO.
+Save via toolbar button, save all open tabs in one action, two-way sync
+with the native bookmark tree, 5-min poll for remote changes, automatic
+conflict retry — one shared codebase across both browsers. Web UI (list,
+search, tag management, bulk operations, trash, Netscape HTML export,
+sign out) deploys as a static SPA. Safari is next in the roadmap. See
+`spec.md` for the full design.
 
 ## Features
 

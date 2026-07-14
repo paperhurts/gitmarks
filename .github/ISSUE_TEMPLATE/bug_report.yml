@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in gitmarks doesn't work as expected
+labels: [bug]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where does it happen?
+      options:
+        - Chrome extension
+        - Firefox add-on
+        - Web UI
+        - More than one of the above
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: gitmarks version
+      description: Extension version (chrome://extensions or about:addons) or "web UI".
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: "Firefox 140.2 on Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Console output (if any)
+      description: >
+        Extension: chrome://extensions → gitmarks → "service worker" /
+        about:debugging → gitmarks → Inspect. Web UI: F12 → Console.
+        Remove anything sensitive — never paste your token.
+      render: text
+  - type: checkboxes
+    id: token-check
+    attributes:
+      label: Safety check
+      options:
+        - label: I have not included my GitHub token anywhere in this report
+          required: true
