@@ -87,8 +87,9 @@ gitmarks is for people who want to *own* their bookmarks.
 - We certify compliance with the Developer Program Policies.
 
 Privacy policy URL: `https://paperhurts.github.io/gitmarks/privacy.html`
-(rendered from `docs/privacy-policy.md` on every Pages deploy — see
-`packages/web/scripts/build-privacy.mjs`).
+(served from the static `packages/web/public/privacy.html`, themed to match
+paperhurts.dev; keep it in sync with `docs/privacy-policy.md`, the
+repo-readable copy).
 
 ## Data-type disclosures (actual store answers, 2026-07)
 
@@ -112,5 +113,7 @@ Privacy policy URL: `https://paperhurts.github.io/gitmarks/privacy.html`
 
 ## Hosting the privacy policy
 ✅ Done — live at `https://paperhurts.github.io/gitmarks/privacy.html`,
-rendered from `docs/privacy-policy.md` by the web package's postbuild step
-on every Pages deploy (#72).
+served from the static `packages/web/public/privacy.html` (Vite copies
+`public/` into `dist/`; themed to match paperhurts.dev, commit 109f583).
+`docs/privacy-policy.md` remains the repo-readable copy — update both
+together.
