@@ -14,6 +14,11 @@ A serverless cross-browser bookmark sync system. Two clients — a browser exten
 ## Goal
 
 - Bookmarks sync natively across Chrome, Firefox, Brave, and eventually Safari.
+  (Amended 2026-07: Safari never implemented the `browser.bookmarks`
+  WebExtension API, so native-tree sync is impossible there. Safari ships as a
+  save-only client — toolbar save + save-all-tabs + options; management via the
+  web UI. If Apple ever ships the API, the shared background layer turns on by
+  restoring the manifest's `background` entry + `bookmarks`/`alarms` permissions.)
 - Bookmarks appear in each browser's real bookmark bar, not a separate UI.
 - A web UI for search, tagging, and bulk organization.
 - Single source of truth: a JSON file in the user's own GitHub repo.
@@ -31,7 +36,8 @@ A serverless cross-browser bookmark sync system. Two clients — a browser exten
 ## Architecture
 
 ```
-[Chrome ext] [Firefox ext] [Brave ext] [Safari ext]    [Web UI on GitHub Pages]
+[Chrome ext] [Firefox ext] [Brave ext] [Safari ext*]   [Web UI on GitHub Pages]
+                                    (* save-only — no bookmarks API in Safari)
        \         |             /            /                /
         \        |            /            /                /
          v       v           v            v                v
@@ -238,7 +244,7 @@ Native browser node IDs aren't stable across reinstalls. Extension stores `{ uli
 7. **Web UI MVP** (1-2 days). List, search, tag editor.
 8. **Web UI write ops** (1 day). Bulk operations, trash view, export.
 9. **Documentation** (1 day). README, setup guide, screenshots. This is what makes it open source vs "Sid's personal tool on GitHub."
-10. **Safari** (1-2 days). `safari-web-extension-converter` on Chrome bundle. Sign with personal Apple Developer account ($99/yr) or weekly free rebuild.
+10. **Safari** (1-2 days). `safari-web-extension-converter` on Chrome bundle. Sign with personal Apple Developer account ($99/yr) or weekly free rebuild. (Amended 2026-07: shipped as its own save-only shell rather than a converted Chrome bundle — Safari has no `browser.bookmarks` API, so the background layer is omitted entirely; see `packages/extension-safari/README.md`.)
 
 Total: ~9-11 days of focused work.
 
