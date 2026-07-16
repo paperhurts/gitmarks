@@ -66,6 +66,25 @@ importers:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@22.19.19)
 
+  packages/extension-safari:
+    dependencies:
+      '@gitmarks/core':
+        specifier: workspace:*
+        version: link:../core
+      '@gitmarks/extension-shared':
+        specifier: workspace:*
+        version: link:../extension-shared
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.19
+      '@types/webextension-polyfill':
+        specifier: ^0.12.0
+        version: 0.12.5
+      vite:
+        specifier: ^5.4.0
+        version: 5.4.21(@types/node@22.19.19)
+
   packages/extension-shared:
     dependencies:
       '@gitmarks/core':

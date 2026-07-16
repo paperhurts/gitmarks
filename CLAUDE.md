@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Five packages are merged to main and working:
+Six packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), example fixtures. 83 unit tests.
 - `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 119 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+. **Firefox does NOT support `background.service_worker`** — its manifest uses an event-page background (`background.scripts` + `type: module`) running the same `background.ts` bundle; Chrome's manifest uses `service_worker` (issue #64). Load via `about:debugging` → "Load Temporary Add-on".
+- `@gitmarks/extension-safari` (`packages/extension-safari/`) — Safari shell, **save-only client**: Safari does NOT implement `browser.bookmarks`, so this shell ships no background at all (no listeners/reconcile/apply-remote/poll — all of that exists to sync the native tree) and no `bookmarks`/`alarms` permissions. Popup save, save-all-tabs, and options work unchanged; management happens in the web UI. Plain Vite build (popup + options entries only) produces a converter-ready `dist/`; the Xcode conversion (`xcrun safari-web-extension-converter`), signing, and manual smoke test are macOS-only — steps in its README. Generated `xcode/` dir is git-ignored.
 - `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 109 unit + component tests.
 
 Total: 311 unit + component tests across the monorepo, plus 6 Playwright e2e (4 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
 
-Pending packages (in dependency order): Safari.
+Pending packages: none — all roadmap packages exist. Safari's macOS-side conversion + smoke test remain outstanding (needs a Mac).
 
 `spec.md` remains the source of truth for design decisions that aren't visible in the code.
 
@@ -128,11 +129,11 @@ pnpm --filter @gitmarks/extension-chrome e2e
 4. ✅ Firefox MV3 add-on (`webextension-polyfill` + extension-shared) — issue [#23](https://github.com/paperhurts/gitmarks/issues/23)
 5. ✅ Web UI v1: list / search / tag management — issue [#24](https://github.com/paperhurts/gitmarks/issues/24)
 6. ✅ Web UI v2: bulk operations + trash + export — issue [#25](https://github.com/paperhurts/gitmarks/issues/25)
-7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
+7. 🔶 Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26) — web-extension bundle done (save-only, no `browser.bookmarks` in Safari); Xcode conversion + smoke test pending on macOS
 8. ✅ Bookmark all open tabs in one action — "Save all tabs" popup button, batched single `bookmarks.json` write via `addBookmarks` (dedupe by URL vs active + within batch), groups into a dated `Session YYYY-MM-DD` folder, http(s)-only + `isSafeBookmarkUrl` guard, `tabs` permission — issue [#46](https://github.com/paperhurts/gitmarks/issues/46)
 9. ✅ Popup polish: auto-dismiss ~1.2s after a successful save (`setTimeout(window.close)`); restyle popup to the web UI palette (ink/cyan/magenta, mono font, magenta wordmark)
 
-For next-piece-of-work: Safari (#26) is the last roadmap item. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
+For next-piece-of-work: Safari's macOS-side steps (convert, sign, smoke test — see `packages/extension-safari/README.md`) are the last roadmap item. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
 
 ## Non-goals (do not implement)
 
