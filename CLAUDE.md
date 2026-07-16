@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Six packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), example fixtures. 83 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 119 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 119 unit tests live here. Consumed by the browser shells via `workspace:*` (Chrome/Firefox use background+popup+options; Safari popup+options only). Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+. **Firefox does NOT support `background.service_worker`** — its manifest uses an event-page background (`background.scripts` + `type: module`) running the same `background.ts` bundle; Chrome's manifest uses `service_worker` (issue #64). Load via `about:debugging` → "Load Temporary Add-on".
 - `@gitmarks/extension-safari` (`packages/extension-safari/`) — Safari shell, **save-only client**: Safari does NOT implement `browser.bookmarks`, so this shell ships no background at all (no listeners/reconcile/apply-remote/poll — all of that exists to sync the native tree) and no `bookmarks`/`alarms` permissions. Popup save, save-all-tabs, and options work unchanged; management happens in the web UI. Plain Vite build (popup + options entries only) produces a converter-ready `dist/`; the Xcode conversion (`xcrun safari-web-extension-converter`), signing, and manual smoke test are macOS-only — steps in its README. Generated `xcode/` dir is git-ignored.
@@ -72,14 +72,14 @@ Cross-browser source — owns all popup, options, background, and `src/lib/` mod
 
 **Popup save vs. SW save** (architectural decision worth noting): the popup constructs its own `GitHubClient` and calls `saveBookmark` directly in the page context. The service worker handles `browser.bookmarks.*` events and the poll alarm. The two paths don't talk via `browser.runtime.sendMessage`. This split is intentional — it makes the popup save reliable (clear page lifecycle) and keeps the SW focused on event-driven work.
 
-### `@gitmarks/extension-chrome` and `@gitmarks/extension-firefox` (shells)
+### `@gitmarks/extension-chrome`, `@gitmarks/extension-firefox`, `@gitmarks/extension-safari` (shells)
 
 Each is a thin browser-specific shell over `@gitmarks/extension-shared`:
-- Own manifest (Chrome: TS via `@crxjs/vite-plugin defineManifest`; Firefox: literal `manifest.json` copied into `dist/` post-build by `scripts/copy-manifest.mjs`)
-- Own Vite config (Chrome: `crx({manifest})` plugin; Firefox: plain multi-entry with `root: "src"` + `outDir: "../dist"`)
-- Own entry files that side-effect-import from `@gitmarks/extension-shared/{background,popup,options}`
-- Own HTML files (duplicated across shells because Vite needs them as build inputs — known follow-up)
-- Chrome owns the Playwright e2e suite; Firefox relies on the manual smoke test in its README
+- Own manifest (Chrome: TS via `@crxjs/vite-plugin defineManifest`; Firefox/Safari: literal `manifest.json` copied into `dist/` post-build by `scripts/copy-manifest.mjs`)
+- Own Vite config (Chrome: `crx({manifest})` plugin; Firefox/Safari: plain multi-entry with `root: "src"` + `outDir: "../dist"`)
+- Own entry files that side-effect-import from `@gitmarks/extension-shared/{background,popup,options}` — except Safari, which has no background entry at all (Safari lacks `browser.bookmarks`, so the whole sync layer is omitted; save-only client)
+- HTML files are copied from `extension-shared/src/` at build time by each shell's `scripts/copy-html.mjs` (git-ignored in the shells)
+- Chrome owns the Playwright e2e suite; Firefox and Safari rely on the manual smoke tests in their READMEs (Safari's additionally requires the macOS `safari-web-extension-converter`/Xcode step)
 
 ### `@gitmarks/web` (`packages/web/`)
 
