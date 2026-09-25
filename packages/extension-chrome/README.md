@@ -6,7 +6,9 @@ manifest, Vite + `@crxjs/vite-plugin` build configuration, thin entry
 files, and the Playwright e2e suite.
 
 Functionally identical to `@gitmarks/extension-firefox` — both shells
-import the same source.
+import the same source. (`@gitmarks/extension-safari` imports the same
+popup/options but no background — Safari has no `browser.bookmarks` API,
+so it's a save-only client.)
 
 ## Develop
 
