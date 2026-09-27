@@ -31,6 +31,11 @@ function injectProdCsp(): Plugin {
 export default defineConfig({
   plugins: [react(), injectProdCsp()],
   base: "./",
+  // Fixed ports from this machine's port registry (server-start's config.toml).
+  // Vite's defaults (5173/4173) belong to another project there, and without
+  // strictPort Vite would silently hop to the next free port instead of failing.
+  server: { port: 5120, strictPort: true },
+  preview: { port: 4120, strictPort: true },
   build: {
     outDir: "dist",
     sourcemap: true,
