@@ -10,7 +10,7 @@ API; no server.
 pnpm --filter @gitmarks/web dev
 ```
 
-The dev server runs at `http://localhost:5173/`. Hash routes:
+The dev server runs at `http://localhost:5120/`. Hash routes:
 
 - `#/setup` — PAT + owner + repo + branch entry, with a Validate step
 - `#/` — list page (search + tag filter sidebar)
@@ -32,7 +32,7 @@ works under any path — drop the folder onto GitHub Pages or Cloudflare Pages.
 
 After running `pnpm --filter @gitmarks/web dev`:
 
-- [ ] Open `http://localhost:5173/` — the app redirects to `#/setup`.
+- [ ] Open `http://localhost:5120/` — the app redirects to `#/setup`.
 - [ ] Enter a valid fine-grained PAT (Contents: read/write on your bookmarks
       repo), owner, repo, branch. Click **Validate** → green confirmation.
 - [ ] Click **Save** → the app redirects to the list view.
