@@ -1,0 +1,23 @@
+{
+  "name": "@gitmarks/extension-safari",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
+    "dev": "vite",
+    "prebuild": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
+    "build": "vite build && node ./scripts/copy-manifest.mjs",
+    "pretypecheck": "node ./scripts/copy-html.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@gitmarks/core": "workspace:*",
+    "@gitmarks/extension-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/webextension-polyfill": "^0.12.0",
+    "vite": "^5.4.0"
+  }
+}

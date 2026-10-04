@@ -14,6 +14,9 @@ you control.
 - **Chrome:** [Chrome Web Store](https://chromewebstore.google.com/detail/blbacnlfkoloenlhniiplljdmcefikhc)
 - **Firefox:** [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/gitmarks/)
 - **Web UI:** [paperhurts.github.io/gitmarks](https://paperhurts.github.io/gitmarks/) — nothing to install
+- **Safari:** build from source on macOS (Xcode required) — see
+  `packages/extension-safari/README.md`. Save-only: Safari doesn't implement
+  the `browser.bookmarks` API, so native-tree sync isn't possible there.
 
 You'll need a GitHub account, a private repo, and a fine-grained personal
 access token scoped to that repo (Contents: read/write) — the extension's
@@ -22,14 +25,15 @@ options page walks you through all of it in a couple of minutes.
 **Status:** v1.0.0, published on the Chrome Web Store and Firefox AMO.
 Save via toolbar button, save all open tabs in one action, two-way sync
 with the native bookmark tree, 5-min poll for remote changes, automatic
-conflict retry — one shared codebase across both browsers. Web UI (list,
+conflict retry — one shared codebase across browsers. Web UI (list,
 search, tag management, bulk operations, trash, Netscape HTML export,
-sign out) deploys as a static SPA. Safari is next in the roadmap. See
+sign out) deploys as a static SPA. A Safari shell exists as a save-only
+client (Safari has no `browser.bookmarks` API; macOS/Xcode build). See
 `spec.md` for the full design.
 
 ## Features
 
-### Browser extension (Chrome + Firefox)
+### Browser extension (Chrome + Firefox; Safari save-only)
 
 - **Save the current tab** to GitHub via the toolbar button
 - **Save all open tabs** in the current window in one action — one batched
@@ -49,6 +53,12 @@ sign out) deploys as a static SPA. Safari is next in the roadmap. See
 - **Optional tracking-param stripping** (utm_*, fbclid, gclid, …) at save time — opt-in
 - **One-click link to the web UI** from the popup
 - Dark cyan/magenta themed popup + options pages, matching the web UI
+
+**Safari caveat:** Safari doesn't implement the `browser.bookmarks`
+WebExtension API, so the two-way native-tree sync, auto-import, and
+remote→local pull don't apply there. Saving the current page, saving all
+tabs, and the web UI all work fully — see
+`packages/extension-safari/README.md`.
 
 ### Web UI (static SPA — https://paperhurts.github.io/gitmarks/)
 
@@ -71,9 +81,10 @@ sign out) deploys as a static SPA. Safari is next in the roadmap. See
 | Package | Role |
 |---|---|
 | `@gitmarks/core` | Shared TypeScript library: schemas (Zod), GitHub Contents API client with optimistic concurrency, ULID + URL helpers, pure mutation helpers |
-| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by both browser shells via `workspace:*`. 119 unit tests live here. |
+| `@gitmarks/extension-shared` | Cross-browser extension source — popup, options, background, lib/ helpers. Consumed by the browser shells via `workspace:*`. 119 unit tests live here. |
 | `@gitmarks/extension-chrome` | Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e. Thin entry files import from `extension-shared`. |
 | `@gitmarks/extension-firefox` | Firefox MV3 shell. Manifest + plain Vite build. Same source as Chrome via `extension-shared`. Load via `about:debugging`. |
+| `@gitmarks/extension-safari` | Safari shell, save-only (Safari has no `browser.bookmarks` API — no background). Popup + options from `extension-shared`; converted to an Xcode project on macOS via `safari-web-extension-converter`. |
 | `@gitmarks/web` | Static SPA — list, search, tag management, bulk operations, trash, Netscape HTML export, sign out. Vite + React + Tailwind. Talks directly to GitHub via `@gitmarks/core`. Deploys to GitHub Pages or Cloudflare Pages. |
 
 ## Try the web UI
@@ -190,7 +201,7 @@ The repo is a pnpm workspace monorepo. Each package has its own
 ## Architecture
 
 ```
-[Chrome ext] [Firefox ext] [Safari ext (planned)]    [Web UI]
+[Chrome ext] [Firefox ext] [Safari ext (save-only)]    [Web UI]
        \             |                       /                       /
         \            |                      /                       /
          v           v                     v                       v
@@ -229,7 +240,7 @@ The load-bearing invariants:
 - ✅ Web UI v2: bulk operations + trash + export ([#25](https://github.com/paperhurts/gitmarks/issues/25))
 - ✅ Bookmark all open tabs in one action ([#46](https://github.com/paperhurts/gitmarks/issues/46))
 - ✅ Popup polish: web-UI theme, auto-dismiss after save, "Open web UI" link
-- ⬜ Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26))
+- 🔶 Safari ([#26](https://github.com/paperhurts/gitmarks/issues/26)) — shell built (save-only: Safari has no `browser.bookmarks` API); Xcode conversion + signing + smoke test on macOS remain
 
 ## Files in this repo
 

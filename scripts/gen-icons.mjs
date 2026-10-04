@@ -16,6 +16,7 @@ const SIZES = [16, 32, 48, 128];
 const SHELL_ICON_DIRS = [
   resolve(root, "packages/extension-chrome/icons"),
   resolve(root, "packages/extension-firefox/icons"),
+  resolve(root, "packages/extension-safari/icons"),
 ];
 
 if (!existsSync(source)) {

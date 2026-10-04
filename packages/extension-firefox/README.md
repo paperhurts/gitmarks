@@ -134,6 +134,7 @@ packages/
 │   ├── src/options.ts           # PAT/repo/branch + strip-tracking-params
 │   └── src/lib/                 # 12 pure-ish modules
 ├── extension-chrome/            # Chrome shell (manifest + vite-crxjs + e2e)
+├── extension-safari/            # Safari shell (save-only — no bookmarks API in Safari)
 └── extension-firefox/           # this package: Firefox shell
     ├── manifest.json            # MV3, gecko id, strict_min_version 121.0
     ├── vite.config.ts           # plain Vite multi-entry (no crxjs)
