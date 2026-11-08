@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Five packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), example fixtures. 88 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 134 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 136 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+. **Firefox does NOT support `background.service_worker`** — its manifest uses an event-page background (`background.scripts` + `type: module`) running the same `background.ts` bundle; Chrome's manifest uses `service_worker` (issue #64). Load via `about:debugging` → "Load Temporary Add-on".
 - `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). Also bundled into each extension at `web/index.html` (see "Bundled web UI" below). 121 unit + component tests.
 
-Total: 343 unit + component tests across the monorepo, plus 11 Playwright e2e (9 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
+Total: 345 unit + component tests across the monorepo, plus 11 Playwright e2e (9 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
 
 Pending packages (in dependency order): Safari.
 
@@ -67,7 +67,7 @@ Cross-browser source — owns all popup, options, background, and `src/lib/` mod
   - `reconcile.ts` — merge local tree and remote file by URL on cold start
   - `listeners.ts` — `browser.bookmarks.*` listeners with 500ms global debounce, batched flush
   - `background-core.ts` — dependency-injected `runMaybeReconcile` and `runPollRemoteOnce` (testable orchestration extracted from the SW entry)
-  - `bookmarks-file.ts` — `BOOKMARKS_PATH` + `updateBookmarksOrBootstrap` shared by save-flow, listeners, reconcile
+  - `bookmarks-file.ts` — `BOOKMARKS_PATH` + `updateBookmarksOrBootstrap` shared by save-flow, listeners, reconcile; every write also runs `gcTombstones(…, TOMBSTONE_TTL_DAYS = 30)` so tombstone GC rides along with normal writes
   - `web-ui-link.ts` — points the popup's "Open web UI" footer link at the bundled `web/index.html` (opened via `tabs.create`; the public-site href in `popup.html` is only a fallback)
 
 **Popup save vs. SW save** (architectural decision worth noting): the popup constructs its own `GitHubClient` and calls `saveBookmark` directly in the page context. The service worker handles `browser.bookmarks.*` events and the poll alarm. The two paths don't talk via `browser.runtime.sendMessage`. This split is intentional — it makes the popup save reliable (clear page lifecycle) and keeps the SW focused on event-driven work.
