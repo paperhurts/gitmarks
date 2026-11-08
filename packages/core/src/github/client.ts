@@ -31,6 +31,16 @@ export interface ReadResult<T> {
   etag: string;
 }
 
+/** GitHub's `message` from an error response body, if any (never throws). */
+async function errorDetail(res: Response): Promise<string | undefined> {
+  try {
+    const body = (await res.json()) as { message?: unknown };
+    return typeof body.message === "string" && body.message !== "" ? body.message : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export class GitHubClient {
   private readonly owner: string;
   private readonly repo: string;
@@ -165,11 +175,15 @@ export class GitHubClient {
     });
 
     if (res.status === 409 || res.status === 422) {
-      throw new GitHubConflictError(path, res.status);
+      throw new GitHubConflictError(path, res.status, await errorDetail(res));
     }
     if (res.status === 401) throw new GitHubAuthError();
     if (!res.ok) {
-      throw new GitHubError(`GitHub ${res.status} on PUT ${path}`, res.status);
+      const detail = await errorDetail(res);
+      throw new GitHubError(
+        `GitHub ${res.status} on PUT ${path}${detail ? `: ${detail}` : ""}`,
+        res.status,
+      );
     }
 
     const respBody = (await res.json()) as { content: { sha: string } };
