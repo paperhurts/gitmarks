@@ -59,14 +59,14 @@ describe("dedupeBookmarks", () => {
     expect(dedupeBookmarks(NOW)(f).bookmarks).toEqual(f.bookmarks);
   });
 
-  it("handles a large file quickly (18k entries, 483 URLs)", () => {
+  // Real-world size from the pre-#84 duplication. No wall-clock assertion:
+  // shared CI runners are too noisy for one (it flaked at 1.5s vs 1s).
+  it("collapses a large file (18k entries, 483 URLs)", () => {
     const bookmarks: Bookmark[] = [];
     for (let i = 0; i < 18460; i++) {
       bookmarks.push(bm({ id: `id${i}`, url: `https://site${i % 483}.example/page` }));
     }
-    const t0 = performance.now();
     const next = dedupeBookmarks(NOW)(file(bookmarks));
-    expect(performance.now() - t0).toBeLessThan(1000);
     expect(next.bookmarks.filter((b) => b.deleted_at == null)).toHaveLength(483);
   });
 });
