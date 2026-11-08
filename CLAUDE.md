@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Five packages are merged to main and working:
 - `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), tag helpers (`normalizeTag`/`canonicalTag`/`mergeTags`), example fixtures. 90 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 150 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 152 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+. **Firefox does NOT support `background.service_worker`** — its manifest uses an event-page background (`background.scripts` + `type: module`) running the same `background.ts` bundle; Chrome's manifest uses `service_worker` (issue #64). Load via `about:debugging` → "Load Temporary Add-on".
-- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). 109 unit + component tests.
+- `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). Also bundled into each extension at `web/index.html` (see "Bundled web UI" below). 121 unit + component tests.
 
-Total: 349 unit + component tests across the monorepo, plus 9 Playwright e2e (7 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
+Total: 363 unit + component tests across the monorepo, plus 11 Playwright e2e (9 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
 
 Pending packages (in dependency order): Safari.
 
@@ -25,7 +25,7 @@ Pending packages (in dependency order): Safari.
 
 These are spec-level constraints; don't violate without an explicit discussion:
 
-- **No server, ever.** Clients talk to GitHub REST API directly. PAT lives client-side (`chrome.storage.local`, `localStorage`).
+- **No server, ever.** Clients talk to GitHub REST API directly. PAT lives client-side (`chrome.storage.local`, `localStorage`). The web UI bundled in the extension reads the extension's `storage.local` settings directly — it never keeps its own copy.
 - **The user's private GitHub repo is the single source of truth.** Git history is the audit log. No client-side encryption (would defeat human-readable history).
 - **Optimistic concurrency** via GitHub file SHA. 409/422 → refetch → replay mutation → retry (up to 3, exponential backoff). Soft deletes (tombstones, GC'd after 30 days) eliminate most conflicts.
 - **Sync model:** event-driven push for local changes (500ms debounce, batched), 5-minute poll for remote (`chrome.alarms` + `If-None-Match` so 304s don't burn rate limit).
@@ -35,7 +35,7 @@ These are spec-level constraints; don't violate without an explicit discussion:
 - **URL safety:** Bookmark URLs are checked against an allowlist of safe schemes (`isSafeBookmarkUrl` in `@gitmarks/core`) at every write or render boundary: (a) popup save in `buildBookmark` (throws); (b) the SW listener path in `applyBatch` create + update branches (skip + warn); (c) reconcile's `remoteByUrl` construction (filters unsafe remote entries before they reach the local tree or the idMap); (d) reconcile's `localOnly` upload loop (filters unsafe local entries before pushing to GitHub); (e) the `apply-remote` boundary that writes remote entries into `browser.bookmarks` (skip + warn); (f) the web UI's `BookmarkRow` render (turns unsafe URLs into non-clickable italic spans with a tooltip). Unsafe schemes (`javascript:`, `data:`, etc.) are rejected/skipped everywhere bookmarks cross a trust boundary.
 - **Remote file validation:** `useGitmarksData` re-validates `bookmarks.json` and `tags.json` through Zod (`bookmarksFileSchema` / `tagsFileSchema`) after reading from GitHub. Malformed remote data surfaces as an error rather than rendering attacker-controlled fields.
 - **Tag color guard:** `TagChip` regex-validates the color string before placing it into a CSS `style` object; malformed colors fall back to a default.
-- **CSP:** Both extension manifests carry an explicit `content_security_policy.extension_pages` restricting `connect-src` to `'self' https://api.github.com`, disallowing inline scripts. The web UI's `<meta>` CSP is injected by a Vite plugin scoped to `apply: "build"` only (running it in dev would block Vite's HMR WebSocket); `frame-ancestors` is intentionally omitted because `<meta>` cannot enforce it per CSP3 — clickjacking defense must come from an HTTP header at the hosting layer.
+- **CSP:** Both extension manifests carry an explicit `content_security_policy.extension_pages` restricting `connect-src` to `'self' https://api.github.com`, disallowing inline scripts. That policy also covers the bundled web UI (`web/index.html` is an extension page). The web UI's `<meta>` CSP is injected by a Vite plugin scoped to `apply: "build"` only (running it in dev would block Vite's HMR WebSocket); `frame-ancestors` is intentionally omitted because `<meta>` cannot enforce it per CSP3 — clickjacking defense must come from an HTTP header at the hosting layer.
 
 ## Architecture by package
 
@@ -70,6 +70,7 @@ Cross-browser source — owns all popup, options, background, and `src/lib/` mod
   - `bookmarks-file.ts` — `BOOKMARKS_PATH` + `updateBookmarksOrBootstrap` shared by save-flow, listeners, reconcile
   - `tag-suggest.ts` — `knownTags` (tags.json keys ∪ tags used on active bookmarks) and `suggestTags` (local ranking: same-host tags, title-word matches, popularity; prefix-filtered by typed text)
   - `tag-input.ts` — popup chip input (`TagInput`): Enter/comma commits, Enter on empty submits (= save), Backspace removes last; DOM via `createElement`/`textContent` only; chip colors from `tags.json` only if they pass the `#RRGGBB` guard
+  - `web-ui-link.ts` — points the popup's "Open web UI" footer link at the bundled `web/index.html` (opened via `tabs.create`; the public-site href in `popup.html` is only a fallback)
 
 **Popup save vs. SW save** (architectural decision worth noting): the popup constructs its own `GitHubClient` and calls `saveBookmark` directly in the page context. The service worker handles `browser.bookmarks.*` events and the poll alarm. The two paths don't talk via `browser.runtime.sendMessage`. This split is intentional — it makes the popup save reliable (clear page lifecycle) and keeps the SW focused on event-driven work.
 
@@ -80,6 +81,7 @@ Cross-browser source — owns all popup, options, background, and `src/lib/` mod
 Each is a thin browser-specific shell over `@gitmarks/extension-shared`:
 - Own manifest (Chrome: TS via `@crxjs/vite-plugin defineManifest`; Firefox: literal `manifest.json` copied into `dist/` post-build by `scripts/copy-manifest.mjs`)
 - Own Vite config (Chrome: `crx({manifest})` plugin; Firefox: plain multi-entry with `root: "src"` + `outDir: "../dist"`)
+- A post-build `scripts/copy-web.mjs dist` step that copies `packages/web/dist` (index.html + assets, no sourcemaps) into `dist/web/`; each shell devDepends on `@gitmarks/web` so `pnpm -r build` builds the web UI first
 - Own entry files that side-effect-import from `@gitmarks/extension-shared/{background,popup,options}`
 - Own HTML files (duplicated across shells because Vite needs them as build inputs — known follow-up)
 - Chrome owns the Playwright e2e suite; Firefox relies on the manual smoke test in its README
@@ -97,6 +99,8 @@ Vite + React 18 + Tailwind 3 SPA. Read-side: list, search, tag management. Hash 
 - **Bulk operations** (`src/lib/bulk-mutations.ts`, `src/components/BulkActionsBar.tsx`, `src/hooks/useSelection.ts`): multi-select state; bulk add tag / remove tag / set folder / soft-delete; each fires one `client.update` call per action.
 - **Trash** (`src/routes/TrashPage.tsx`, `src/components/TrashList.tsx`): filters `deleted_at != null` within the 30-day GC window; restore clears `deleted_at` via `bulkRestore`.
 - **Export** (`src/lib/netscape-export.ts`, `src/lib/download.ts`): generates Netscape Bookmark File Format and triggers a browser download via Blob.
+
+**Bundled web UI (no second setup):** the public site (paperhurts.github.io) is a different origin from the extension, so its `localStorage` can't see the PAT the user entered in the extension, and users had to set up twice. Each extension therefore ships the same web build (`base: "./"` + hash routing make it location-independent) at `web/index.html`, and the popup opens that copy. At runtime `isExtensionPage()` (extension protocol + a `storage.local` API) switches `RequireSettings` to `loadExtensionSettings()`, which reads and Zod-validates the extension's `gitmarks:settings` asynchronously. In that mode the PAT form is never shown: `/setup` and the no-settings state render `ExtensionSetupNotice` → `runtime.openOptionsPage()`, and Sign out is hidden (it would clear the extension's own settings). The public site's localStorage path is unchanged.
 
 **Tag rename is decoupled from bookmark refs by design** — `renameTag` only mutates `tags.json`. Bookmark `tags[]` entries still reference the old name until updated by the extension's save path. Per `spec.md` §"`tags.json`": "Separate file so renaming a tag doesn't churn every bookmark."
 

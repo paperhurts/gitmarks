@@ -12,7 +12,8 @@ interface Props {
   status: LayoutStatus;
   onRefresh: () => void;
   onExport?: () => void;
-  onSignOut?: () => void;
+  /** Omitted (or undefined) hides Sign out — e.g. inside the extension, where it would wipe the extension's own settings. */
+  onSignOut?: (() => void) | undefined;
   refreshing: boolean;
   /** When true, disables the Sign out button so an in-flight write isn't
    *  silently committed after the user signs out. */

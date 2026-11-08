@@ -88,8 +88,10 @@ version Chrome uses) need a manual check:
       `tabs` permission on demand (needed to read every tab's URL/title); it is
       NOT requested at install time.
 - [ ] The popup footer shows **"Open web UI ↗"** on every state — clicking it
-      opens the companion web UI (https://paperhurts.github.io/gitmarks/) in a
-      new tab.
+      opens the web UI bundled in the add-on (`moz-extension://<uuid>/web/index.html`)
+      in a new tab. After setting up once in the add-on it lists your bookmarks
+      with no second setup and no **Sign out** button; before setup it shows
+      "gitmarks isn't set up yet" with **Open gitmarks settings**.
 
 **Native tree sync:**
 

@@ -72,6 +72,11 @@ jobs:
       - name: Build core
         run: pnpm --filter @gitmarks/core build
 
+      # The extension bundles the web UI at web/index.html (pree2e copies
+      # packages/web/dist in via scripts/copy-web.mjs), so it must exist first.
+      - name: Build web UI
+        run: pnpm --filter @gitmarks/web build
+
       - name: Install Playwright Chromium
         run: pnpm --filter @gitmarks/extension-chrome exec playwright install --with-deps chromium
 

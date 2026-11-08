@@ -17,7 +17,7 @@ import {
 } from "../lib/bulk-mutations.js";
 import { toNetscapeHtml } from "../lib/netscape-export.js";
 import { downloadString } from "../lib/download.js";
-import { clearSettings } from "../lib/settings.js";
+import { clearSettings, isExtensionPage } from "../lib/settings.js";
 
 interface Props {
   client: GitHubClient;
@@ -99,7 +99,7 @@ export function ListPage({ client }: Props) {
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing} busy={writing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={isExtensionPage() ? undefined : onSignOut} refreshing={refreshing} busy={writing}>
       <div data-testid="list-page" className="grid grid-cols-[12rem_1fr] gap-4 p-4">
         <aside className="border-r border-fog pr-4">
           <h2 className="text-magenta text-sm uppercase mb-2">Tags</h2>

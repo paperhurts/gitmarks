@@ -21,10 +21,18 @@ import { requestTabsPermission } from "./lib/tabs-permission.js";
 import { TagInput } from "./lib/tag-input.js";
 import { knownTags, suggestTags } from "./lib/tag-suggest.js";
 import { BOOKMARKS_PATH } from "./lib/bookmarks-file.js";
+import { wireWebUiLink } from "./lib/web-ui-link.js";
 import type { LastErrorRecord } from "./lib/background-core.js";
 
 const root = document.getElementById("root");
 if (root == null) throw new Error("#root not found");
+
+// The footer link is present in every popup state, so wire it up front.
+wireWebUiLink(document.querySelector<HTMLAnchorElement>("footer.weblink a"), {
+  getURL: (path) => browser.runtime.getURL(path),
+  openTab: (url) => browser.tabs.create({ url }),
+  closePopup: () => window.close(),
+});
 
 async function getActiveTab(): Promise<browser.Tabs.Tab | null> {
   // When opened as a real extension popup, currentWindow refers to the
