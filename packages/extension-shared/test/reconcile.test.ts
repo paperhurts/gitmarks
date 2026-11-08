@@ -227,4 +227,87 @@ describe("reconcile", () => {
     // (the 404 was already handled by reconcile's own read-catch, not by update).
     expect(write).not.toHaveBeenCalled();
   });
+
+  describe("duplicate prevention (URL normalization)", () => {
+    const tree = (children: any[]) => [
+      { id: "root", children: [
+        { id: BAR, title: "Bookmarks Bar", children },
+        { id: OTHER, title: "Other Bookmarks", children: [] },
+      ] },
+    ];
+
+    it("matches a local trailing-slash / fragment URL to its normalized remote entry (no re-upload)", async () => {
+      const remote: BookmarksFile = {
+        version: 1,
+        updated_at: nowIso,
+        bookmarks: [
+          bm({ id: "u-slash", url: "https://site.example/page" }),
+          bm({ id: "u-frag", url: "https://site.example/doc" }),
+        ],
+      };
+      const read = vi.fn(async () => ({ data: remote, sha: "s0", etag: "" }));
+      const update = vi.fn();
+      const client = fakeClient({ read, update });
+      (browser.bookmarks.getTree as any).mockResolvedValueOnce(tree([
+        { id: "n-slash", parentId: BAR, title: "Page", url: "https://site.example/page/" },
+        { id: "n-frag", parentId: BAR, title: "Doc", url: "https://site.example/doc#intro" },
+      ]));
+
+      const idMap = await IdMap.load();
+      await reconcile(client, idMap, BAR, OTHER, machineId, nowIso);
+
+      expect(update).not.toHaveBeenCalled();
+      expect(browser.bookmarks.create).not.toHaveBeenCalled();
+      expect(idMap.nodeForUlid(asUlid("u-slash"))).toBe("n-slash");
+      expect(idMap.nodeForUlid(asUlid("u-frag"))).toBe("n-frag");
+    });
+
+    it("is idempotent: a second run over its own output uploads nothing", async () => {
+      let current: BookmarksFile = { version: 1, updated_at: nowIso, bookmarks: [] };
+      const read = vi.fn(async () => ({ data: current, sha: "s", etag: "" }));
+      const update = vi.fn(async (_p: string, mutate: any) => {
+        current = mutate(current);
+        return { data: current, sha: "s", etag: "" };
+      });
+      const client = fakeClient({ read, update });
+      const local = [
+        { id: "n1", parentId: BAR, title: "A", url: "https://a.example/x/" },
+        { id: "n2", parentId: BAR, title: "B", url: "https://b.example/#top" },
+      ];
+
+      (browser.bookmarks.getTree as any).mockResolvedValueOnce(tree(local));
+      await reconcile(client, await IdMap.load(), BAR, OTHER, machineId, nowIso);
+      expect(current.bookmarks).toHaveLength(2);
+
+      (browser.bookmarks.getTree as any).mockResolvedValueOnce(tree(local));
+      await reconcile(client, await IdMap.load(), BAR, OTHER, machineId, nowIso);
+      expect(current.bookmarks).toHaveLength(2);
+      expect(update).toHaveBeenCalledTimes(1);
+    });
+
+    it("dedupes inside the mutator against a file that changed since the read", async () => {
+      const readFile: BookmarksFile = { version: 1, updated_at: nowIso, bookmarks: [] };
+      // Another device added the same URL between our read and our write.
+      const latest: BookmarksFile = {
+        version: 1,
+        updated_at: nowIso,
+        bookmarks: [bm({ id: "u-other", url: "https://race.example/a" })],
+      };
+      let written: BookmarksFile | null = null;
+      const read = vi.fn(async () => ({ data: readFile, sha: "s0", etag: "" }));
+      const update = vi.fn(async (_p: string, mutate: any) => {
+        written = mutate(latest);
+        return { data: written, sha: "s1", etag: "" };
+      });
+      const client = fakeClient({ read, update });
+      (browser.bookmarks.getTree as any).mockResolvedValueOnce(tree([
+        { id: "n1", parentId: BAR, title: "A", url: "https://race.example/a/" },
+        { id: "n2", parentId: BAR, title: "New", url: "https://new.example/" },
+      ]));
+
+      await reconcile(client, await IdMap.load(), BAR, OTHER, machineId, nowIso);
+      const urls = written!.bookmarks.map((b) => b.url);
+      expect(urls).toEqual(["https://race.example/a", "https://new.example/"]);
+    });
+  });
 });
