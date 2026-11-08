@@ -263,4 +263,33 @@ describe("applyRemoteChanges", () => {
     // browser.bookmarks.get would have been called if applyRemoteEdit had run.
     expect(browser.bookmarks.get).not.toHaveBeenCalled();
   });
+
+  it("creates only one local bookmark for several remote entries with the same URL", async () => {
+    const idMap = await IdMap.load();
+    await applyRemoteChanges(
+      file([
+        bookmark({ id: "d1", url: "https://dup.example/p" }),
+        bookmark({ id: "d2", url: "https://dup.example/p" }),
+        bookmark({ id: "d3", url: "https://dup.example/p" }),
+      ]),
+      idMap, BAR, OTHER,
+    );
+    expect(browser.bookmarks.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not create a local bookmark for a duplicate whose URL is already mapped", async () => {
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("keep"), asNodeId("node-keep"));
+    (browser.bookmarks.get as any).mockResolvedValue([
+      { id: "node-keep", parentId: BAR, title: "Example", url: "https://dup.example/p" },
+    ]);
+    await applyRemoteChanges(
+      file([
+        bookmark({ id: "dup", url: "https://dup.example/p" }),
+        bookmark({ id: "keep", url: "https://dup.example/p" }),
+      ]),
+      idMap, BAR, OTHER,
+    );
+    expect(browser.bookmarks.create).not.toHaveBeenCalled();
+  });
 });
