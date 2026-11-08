@@ -136,7 +136,7 @@ describe("GitHubClient.readIfChanged", () => {
 });
 
 describe("GitHubClient large files (>1 MB, encoding=none)", () => {
-  it("fetches the bytes via the raw media type, keeping metadata sha + etag", async () => {
+  it("fetches the bytes from the git blob for that sha, keeping metadata sha + etag", async () => {
     const data = { version: 1, bookmarks: ["x".repeat(10)] };
     const fetchMock = vi
       .fn()
@@ -161,8 +161,9 @@ describe("GitHubClient large files (>1 MB, encoding=none)", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [rawUrl, rawInit] = fetchMock.mock.calls[1]!;
     expect(String(rawUrl)).toBe(
-      "https://api.github.com/repos/alice/marks/contents/bookmarks.json?ref=main",
+      "https://api.github.com/repos/alice/marks/git/blobs/big1",
     );
+    expect(rawInit?.cache).toBe("no-store");
     const headers = rawInit?.headers as Record<string, string>;
     expect(headers.Accept).toBe("application/vnd.github.raw+json");
     expect(headers.Authorization).toBe("Bearer test-token");
@@ -179,6 +180,9 @@ describe("GitHubClient large files (>1 MB, encoding=none)", () => {
     const client = mkClient(fetchMock);
     const result = await client.readIfChanged<typeof data>("bookmarks.json", '"m1"');
     expect(result).toEqual({ data, sha: "big2", etag: '"m2"' });
+    // The blob fetch must not carry the conditional header.
+    const blobHeaders = fetchMock.mock.calls[1]![1]?.headers as Record<string, string>;
+    expect(blobHeaders["If-None-Match"]).toBeUndefined();
   });
 
   it("still rejects unknown encodings", async () => {
