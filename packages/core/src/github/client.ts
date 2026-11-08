@@ -87,7 +87,7 @@ export class GitHubClient {
       headers: this.headers(),
     });
     this.throwForStatus(res, path);
-    return this.parseRead<T>(res);
+    return this.parseRead<T>(res, path);
   }
 
   async readIfChanged<T>(
@@ -100,24 +100,40 @@ export class GitHubClient {
     });
     if (res.status === 304) return null;
     this.throwForStatus(res, path);
-    return this.parseRead<T>(res);
+    return this.parseRead<T>(res, path);
   }
 
-  private async parseRead<T>(res: Response): Promise<ReadResult<T>> {
+  private async parseRead<T>(res: Response, path: string): Promise<ReadResult<T>> {
     const body = (await res.json()) as ContentsReadBody;
-    if (typeof body.content !== "string" || body.encoding !== "base64") {
+    let decoded: string;
+    if (typeof body.content === "string" && body.encoding === "base64") {
+      decoded = decodeBase64Utf8(body.content);
+    } else if (body.encoding === "none" && typeof body.sha === "string") {
+      // Files over 1 MB: the JSON response carries only metadata. Fetch the
+      // bytes with the raw media type (works up to 100 MB); keep the sha and
+      // ETag from the metadata response so concurrency + polling still work.
+      decoded = await this.readRaw(path);
+    } else {
       throw new GitHubError(
         `unexpected GitHub contents payload (encoding=${body.encoding})`,
         res.status,
       );
     }
-    const decoded = decodeBase64Utf8(body.content);
     const data = JSON.parse(decoded) as T;
     return {
       data,
       sha: body.sha,
       etag: res.headers.get("etag") ?? "",
     };
+  }
+
+  private async readRaw(path: string): Promise<string> {
+    const res = await this.fetchImpl(this.contentsUrl(path), {
+      method: "GET",
+      headers: this.headers({ Accept: "application/vnd.github.raw+json" }),
+    });
+    this.throwForStatus(res, path);
+    return res.text();
   }
 
   async write<T>(
