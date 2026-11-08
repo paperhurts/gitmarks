@@ -117,3 +117,57 @@ served from the static `packages/web/public/privacy.html` (Vite copies
 `public/` into `dist/`; themed to match paperhurts.dev, commit 109f583).
 `docs/privacy-policy.md` remains the repo-readable copy — update both
 together.
+
+---
+
+## Releases
+
+### Release checklist (any version)
+1. Bump `version` in `packages/extension-chrome/manifest.config.ts` **and**
+   `packages/extension-firefox/manifest.json` (keep them equal).
+2. From a clean checkout of the release commit, build both:
+   `pnpm install --frozen-lockfile && pnpm build`.
+3. Zip the *contents* of `packages/extension-chrome/dist/` →
+   `store-submission/gitmarks-chrome-X.Y.Z.zip` (CWS upload).
+4. Zip the *contents* of `packages/extension-firefox/dist/` →
+   `store-submission/gitmarks-firefox-X.Y.Z.zip` (AMO upload).
+5. `git archive --format=zip -o store-submission/gitmarks-source-X.Y.Z.zip HEAD`
+   (AMO asks for source because the add-on is bundled by Vite).
+6. AMO: paste the release notes and the reviewer build notes below.
+7. Tag the release commit `vX.Y.Z` after both stores accept it.
+
+### AMO reviewer build notes (paste into "Notes to reviewer")
+> The add-on is built from this monorepo with Vite. To reproduce
+> `gitmarks-firefox-X.Y.Z.zip` from the attached source zip:
+>
+> - Node.js 20 or newer (built with Node 24.11.1), pnpm 9 (built with 9.15.9)
+> - `pnpm install --frozen-lockfile`
+> - `pnpm --filter @gitmarks/core build`
+> - `pnpm --filter @gitmarks/web build`
+> - `pnpm --filter @gitmarks/extension-firefox build`
+>
+> Output: `packages/extension-firefox/dist/`. `web/` inside it is the
+> project's own web UI (`packages/web`), bundled so it can read the add-on's
+> settings; it is an extension page under the manifest CSP and talks only to
+> api.github.com. No remote code, no minified third-party code beyond npm
+> dependencies listed in `pnpm-lock.yaml`.
+
+### 1.1.0 release notes
+> **Tags, a built-in web UI, and important sync fixes.**
+>
+> - **Tag before saving:** add tags right in the popup, with suggestions from
+>   tags you already use. Reopen the popup on a saved page to edit its tags.
+> - **No second setup:** "Open web UI" now opens a copy built into the
+>   extension that uses the extension's settings — no re-entering your token.
+> - **Fixed: duplicate bookmarks.** Bookmarks whose URL ended in a slash or
+>   had a #section could be uploaded again on each sync. If your repo grew
+>   duplicates, open the web UI → **Remove duplicates**, then Trash →
+>   **Empty trash**.
+> - **Fixed: large bookmark files.** Repos with a `bookmarks.json` over 1 MB
+>   now sync instead of failing.
+> - Trash is now actually cleared after 30 days; clearer GitHub error messages.
+
+Plain-text version for the CWS (no release-notes field; use it in the
+"What's new" part of the description if wanted):
+Tags in the popup · built-in web UI with no second setup · fixes duplicate
+bookmarks and repos over 1 MB · trash cleared after 30 days.
