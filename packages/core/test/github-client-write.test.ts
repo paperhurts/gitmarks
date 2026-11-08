@@ -100,3 +100,24 @@ describe("GitHubClient.write", () => {
     ).rejects.toBeInstanceOf(GitHubAuthError);
   });
 });
+
+describe("GitHubClient.write error detail", () => {
+  it("includes GitHub's message in conflict errors", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockResponse(409, { message: "bookmarks.json does not match abc" }),
+    );
+    const client = new GitHubClient({ owner: "a", repo: "r", token: "t", fetch: fetchMock });
+    await expect(client.write("bookmarks.json", {}, "m", { prevSha: "abc" })).rejects.toThrow(
+      "conflict writing bookmarks.json (409: bookmarks.json does not match abc)",
+    );
+  });
+
+  it("includes GitHub's message on other failures", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse(413, { message: "Request too large" }));
+    const client = new GitHubClient({ owner: "a", repo: "r", token: "t", fetch: fetchMock });
+    await expect(client.write("bookmarks.json", {}, "m")).rejects.toThrow(
+      "GitHub 413 on PUT bookmarks.json: Request too large",
+    );
+  });
+});
+

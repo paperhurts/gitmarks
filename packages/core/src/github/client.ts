@@ -31,6 +31,16 @@ export interface ReadResult<T> {
   etag: string;
 }
 
+/** GitHub's `message` from an error response body, if any (never throws). */
+async function errorDetail(res: Response): Promise<string | undefined> {
+  try {
+    const body = (await res.json()) as { message?: unknown };
+    return typeof body.message === "string" && body.message !== "" ? body.message : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export class GitHubClient {
   private readonly owner: string;
   private readonly repo: string;
@@ -87,7 +97,7 @@ export class GitHubClient {
       headers: this.headers(),
     });
     this.throwForStatus(res, path);
-    return this.parseRead<T>(res);
+    return this.parseRead<T>(res, path);
   }
 
   async readIfChanged<T>(
@@ -100,24 +110,48 @@ export class GitHubClient {
     });
     if (res.status === 304) return null;
     this.throwForStatus(res, path);
-    return this.parseRead<T>(res);
+    return this.parseRead<T>(res, path);
   }
 
-  private async parseRead<T>(res: Response): Promise<ReadResult<T>> {
+  private async parseRead<T>(res: Response, path: string): Promise<ReadResult<T>> {
     const body = (await res.json()) as ContentsReadBody;
-    if (typeof body.content !== "string" || body.encoding !== "base64") {
+    let decoded: string;
+    if (typeof body.content === "string" && body.encoding === "base64") {
+      decoded = decodeBase64Utf8(body.content);
+    } else if (body.encoding === "none" && typeof body.sha === "string") {
+      // Files over 1 MB: the JSON response carries only metadata. Fetch the
+      // bytes from the Git blob for that exact sha (up to 100 MB), so the
+      // content always matches the sha we later write against. A distinct URL
+      // also means the browser HTTP cache can't hand back the metadata
+      // response (same contents URL, different Accept) in its place.
+      decoded = await this.readBlob(body.sha, path);
+    } else {
       throw new GitHubError(
         `unexpected GitHub contents payload (encoding=${body.encoding})`,
         res.status,
       );
     }
-    const decoded = decodeBase64Utf8(body.content);
     const data = JSON.parse(decoded) as T;
     return {
       data,
       sha: body.sha,
       etag: res.headers.get("etag") ?? "",
     };
+  }
+
+  private async readBlob(sha: string, path: string): Promise<string> {
+    const o = encodeURIComponent(this.owner);
+    const r = encodeURIComponent(this.repo);
+    const res = await this.fetchImpl(
+      `${this.baseUrl}/repos/${o}/${r}/git/blobs/${encodeURIComponent(sha)}`,
+      {
+        method: "GET",
+        headers: this.headers({ Accept: "application/vnd.github.raw+json" }),
+        cache: "no-store",
+      },
+    );
+    this.throwForStatus(res, path);
+    return res.text();
   }
 
   async write<T>(
@@ -141,11 +175,15 @@ export class GitHubClient {
     });
 
     if (res.status === 409 || res.status === 422) {
-      throw new GitHubConflictError(path, res.status);
+      throw new GitHubConflictError(path, res.status, await errorDetail(res));
     }
     if (res.status === 401) throw new GitHubAuthError();
     if (!res.ok) {
-      throw new GitHubError(`GitHub ${res.status} on PUT ${path}`, res.status);
+      const detail = await errorDetail(res);
+      throw new GitHubError(
+        `GitHub ${res.status} on PUT ${path}${detail ? `: ${detail}` : ""}`,
+        res.status,
+      );
     }
 
     const respBody = (await res.json()) as { content: { sha: string } };

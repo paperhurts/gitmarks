@@ -40,7 +40,12 @@ export async function reconcile(
     remote = { version: 1, updated_at: nowIso, bookmarks: [] };
   }
 
-  const localByUrl = await collectLocalBookmarks(bookmarksBarId, otherBookmarksId);
+  // Both sides are keyed by the SAME normalization used when uploading.
+  // Keying local by raw URL while remote held normalized URLs (trailing
+  // slash / fragment stripped) made every reconcile re-upload those
+  // bookmarks under fresh ULIDs — unbounded duplication.
+  const keyOf = (url: string): string | null => urlKey(url, stripTrackingParams);
+  const localByUrl = await collectLocalBookmarks(bookmarksBarId, otherBookmarksId, keyOf);
 
   const remoteByUrl = new Map<string, Bookmark>();
   for (const b of remote.bookmarks) {
@@ -49,7 +54,11 @@ export async function reconcile(
       console.warn("[gitmarks] reconcile: skipping remote bookmark with unsafe URL scheme", { ulid: b.id, url: b.url });
       continue;
     }
-    remoteByUrl.set(b.url, b);
+    const key = keyOf(b.url);
+    if (key == null) continue;
+    // Keep the FIRST entry per URL (oldest in file order) so a repeat run
+    // maps the same ULID each time.
+    if (!remoteByUrl.has(key)) remoteByUrl.set(key, b);
   }
 
   for (const [url, b] of remoteByUrl) {
@@ -62,10 +71,10 @@ export async function reconcile(
   await applyRemoteChanges(remote, idMap, bookmarksBarId, otherBookmarksId);
 
   const localOnly: LocalEntry[] = [];
-  for (const [url, local] of localByUrl) {
-    if (!remoteByUrl.has(url)) {
-      if (!isSafeBookmarkUrl(url)) {
-        console.warn("[gitmarks] reconcile: skipping local bookmark with unsafe URL scheme", { url });
+  for (const [key, local] of localByUrl) {
+    if (!remoteByUrl.has(key)) {
+      if (!isSafeBookmarkUrl(local.url)) {
+        console.warn("[gitmarks] reconcile: skipping local bookmark with unsafe URL scheme", { url: local.url });
         continue;
       }
       localOnly.push(local);
@@ -98,8 +107,19 @@ export async function reconcile(
   await updateBookmarksOrBootstrap(
     client,
     (current) => {
+      // Dedupe against the file we're actually writing over (it may have
+      // changed since our read, e.g. another device reconciled first).
+      const present = new Set<string>();
+      for (const b of current.bookmarks) {
+        if (b.deleted_at != null) continue;
+        const k = keyOf(b.url);
+        if (k != null) present.add(k);
+      }
       let next = current;
       for (const { bm } of newBookmarks) {
+        const k = keyOf(bm.url);
+        if (k == null || present.has(k)) continue;
+        present.add(k);
         next = addBookmark(next, bm, nowIso);
       }
       return next;
@@ -115,9 +135,19 @@ export async function reconcile(
   await idMap.save();
 }
 
+/** Normalized comparison key for a URL, or null if it can't be parsed. */
+export function urlKey(url: string, stripTrackingParams = false): string | null {
+  try {
+    return normalizeUrl(url, { stripTrackingParams });
+  } catch {
+    return null;
+  }
+}
+
 async function collectLocalBookmarks(
   bookmarksBarId: string,
   otherBookmarksId: string,
+  keyOf: (url: string) => string | null,
 ): Promise<Map<string, LocalEntry>> {
   const out = new Map<string, LocalEntry>();
   const tree = await browser.bookmarks.getTree();
@@ -125,7 +155,7 @@ async function collectLocalBookmarks(
 
   for (const top of tree[0].children) {
     if (top.id !== bookmarksBarId && top.id !== otherBookmarksId) continue;
-    walk(top, out);
+    walk(top, out, keyOf);
   }
   return out;
 }
@@ -133,15 +163,20 @@ async function collectLocalBookmarks(
 function walk(
   node: Bookmarks.BookmarkTreeNode,
   out: Map<string, LocalEntry>,
+  keyOf: (url: string) => string | null,
 ): void {
   if (node.url != null && node.url.length > 0) {
-    out.set(node.url, {
-      nodeId: node.id,
-      url: node.url,
-      title: node.title,
-    });
+    const key = keyOf(node.url);
+    // First local node per URL wins; later duplicates are left alone.
+    if (key != null && !out.has(key)) {
+      out.set(key, {
+        nodeId: node.id,
+        url: node.url,
+        title: node.title,
+      });
+    }
   }
   if (node.children != null) {
-    for (const child of node.children) walk(child, out);
+    for (const child of node.children) walk(child, out, keyOf);
   }
 }
