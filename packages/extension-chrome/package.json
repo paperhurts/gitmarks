@@ -7,12 +7,12 @@
     "predev": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
     "dev": "vite build --watch --mode development",
     "prebuild": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
-    "build": "vite build",
+    "build": "vite build && node ../../scripts/copy-web.mjs dist",
     "pretypecheck": "node ./scripts/copy-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "pree2e": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs && vite build",
+    "pree2e": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs && vite build && node ../../scripts/copy-web.mjs dist",
     "e2e": "playwright test",
-    "pree2e:headed": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs && vite build",
+    "pree2e:headed": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs && vite build && node ../../scripts/copy-web.mjs dist",
     "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.4.0",
+    "@gitmarks/web": "workspace:*",
     "@playwright/test": "^1.48.0",
     "vite": "^5.4.0"
   }

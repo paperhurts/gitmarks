@@ -70,6 +70,16 @@ Web UI scope, today:
 - Trash view with restore
 - Netscape HTML export
 
+## Two places it runs
+
+- **Public site** (GitHub Pages): settings are entered on `#/setup` and kept in
+  this site's `localStorage`.
+- **Inside the extension** (`web/index.html`, opened from the popup's
+  "Open web UI ↗"): each extension build copies this package's `dist/` in
+  (`scripts/copy-web.mjs`). There the page detects the extension origin and reads
+  the extension's own saved settings, so you set up once. The PAT form is
+  replaced by a pointer to the extension's settings page, and Sign out is hidden.
+
 ## Architecture
 
 ```
