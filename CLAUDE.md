@@ -5,13 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project status
 
 Five packages are merged to main and working:
-- `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), example fixtures. 88 unit tests.
-- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 136 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
+- `@gitmarks/core` (`packages/core/`) — schemas, GitHub Contents API client with optimistic concurrency, ULID/URL helpers (incl. opt-in tracking-param stripping), pure mutation helpers (incl. batched `addBookmarks`), tag helpers (`normalizeTag`/`canonicalTag`/`mergeTags`), example fixtures. 95 unit tests.
+- `@gitmarks/extension-shared` (`packages/extension-shared/`) — canonical owner of the cross-browser extension code: popup, options, background, all of `src/lib/`, and the chrome/browser stub. 159 unit tests live here. Consumed by both browser shells via `workspace:*`. Uses `browser.*` via `webextension-polyfill`.
 - `@gitmarks/extension-chrome` (`packages/extension-chrome/`) — Chrome MV3 shell. Manifest + Vite/crxjs build + Playwright e2e (4 passing, 2 skipped — see issue history for the activeTab/Playwright limitation). Source files are thin entries that re-export from `extension-shared` via its `exports` map.
 - `@gitmarks/extension-firefox` (`packages/extension-firefox/`) — Firefox MV3 shell. Manifest + plain Vite build + manual smoke test (Playwright Firefox doesn't reliably drive WebExtensions). Targets Firefox 121+. **Firefox does NOT support `background.service_worker`** — its manifest uses an event-page background (`background.scripts` + `type: module`) running the same `background.ts` bundle; Chrome's manifest uses `service_worker` (issue #64). Load via `about:debugging` → "Load Temporary Add-on".
 - `@gitmarks/web` (`packages/web/`) — Vite + React + Tailwind SPA. List, search, tag management, bulk operations, trash, Netscape HTML export. Talks directly to GitHub via `@gitmarks/core`. Hash routing (`#/setup`, `#/`, `#/tags`, `#/trash`). Also bundled into each extension at `web/index.html` (see "Bundled web UI" below). 132 unit + component tests.
 
-Total: 356 unit + component tests across the monorepo, plus 11 Playwright e2e (9 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
+Total: 386 unit + component tests across the monorepo, plus 11 Playwright e2e (9 passing, 2 skipped) in the Chrome shell. The web UI is auto-deployed to GitHub Pages by `.github/workflows/deploy-web.yml` on every push to `main` that touches `packages/web/**` or `packages/core/**`.
 
 Pending packages (in dependency order): Safari.
 
@@ -48,7 +48,7 @@ Pure TypeScript ESM library. No browser APIs, no React. Three layers:
 - **Mutations** (`src/mutate.ts`): pure functions — `addBookmark`, `updateBookmark`, `softDeleteBookmark`, `gcTombstones`. Each takes a `BookmarksFile` and `nowIso`, returns a new file. **Purity is load-bearing** — `GitHubClient.update()` replays these on conflict, so they must not close over external state.
 - **GitHub client** (`src/github/client.ts`): `GitHubClient` class with `read`, `readIfChanged` (ETag-conditional), `write` (create or update), `update` (read → mutate → write with 409/422 replay). DI fetch in the constructor for testability — no `msw` needed.
 
-The public API is curated via `src/index.ts` (21 exports). Anything not exported is internal — never deep-import from this package.
+The public API is curated via `src/index.ts` (25 exports). Anything not exported is internal — never deep-import from this package.
 
 ### `@gitmarks/extension-shared` (`packages/extension-shared/`)
 
@@ -67,10 +67,14 @@ Cross-browser source — owns all popup, options, background, and `src/lib/` mod
   - `reconcile.ts` — merge local tree and remote file by URL on cold start
   - `listeners.ts` — `browser.bookmarks.*` listeners with 500ms global debounce, batched flush
   - `background-core.ts` — dependency-injected `runMaybeReconcile` and `runPollRemoteOnce` (testable orchestration extracted from the SW entry)
+  - `tag-suggest.ts` — `knownTags` (tags.json keys ∪ tags used on active bookmarks) and `suggestTags` (local ranking: same-host tags, title-word matches, popularity; prefix-filtered by typed text)
+  - `tag-input.ts` — popup chip input (`TagInput`): Enter/comma commits, Enter on empty submits (= save), Backspace removes last; DOM via `createElement`/`textContent` only; chip colors from `tags.json` only if they pass the `#RRGGBB` guard
   - `bookmarks-file.ts` — `BOOKMARKS_PATH` + `updateBookmarksOrBootstrap` shared by save-flow, listeners, reconcile; every write also runs `gcTombstones(…, TOMBSTONE_TTL_DAYS = 30)` so tombstone GC rides along with normal writes
   - `web-ui-link.ts` — points the popup's "Open web UI" footer link at the bundled `web/index.html` (opened via `tabs.create`; the public-site href in `popup.html` is only a fallback)
 
 **Popup save vs. SW save** (architectural decision worth noting): the popup constructs its own `GitHubClient` and calls `saveBookmark` directly in the page context. The service worker handles `browser.bookmarks.*` events and the poll alarm. The two paths don't talk via `browser.runtime.sendMessage`. This split is intentional — it makes the popup save reliable (clear page lifecycle) and keeps the SW focused on event-driven work.
+
+**Popup tags** (tag-before-save): the popup reads `bookmarks.json` + `tags.json` on open (Zod-revalidated, best-effort — save works without them) for suggestions, chip colors, and already-saved detection. `saveBookmark` dedupes by normalized URL **inside the mutator** (so a 409 replay sees concurrent edits): an existing active bookmark gets its tags updated (`replaceTags: true` when the popup prefilled them, so removals stick; otherwise a union, so a save made before data loaded can't drop tags) and nothing else changes; otherwise it's added. The popup never writes `tags.json` — new tags exist only on bookmarks until the web UI's tag manager registers/colors them (one write, one commit per save). Tag names keep case; typed tags are canonicalized case-insensitively to an existing spelling. Native-tree edits patch url/title only, so gitmarks-only fields (`tags`, `notes`) survive them (regression test in `listeners.test.ts`).
 
 ### `@gitmarks/extension-chrome` and `@gitmarks/extension-firefox` (shells)
 
@@ -136,6 +140,7 @@ pnpm --filter @gitmarks/extension-chrome e2e
 7. ⬜ Safari (`safari-web-extension-converter`) — issue [#26](https://github.com/paperhurts/gitmarks/issues/26)
 8. ✅ Bookmark all open tabs in one action — "Save all tabs" popup button, batched single `bookmarks.json` write via `addBookmarks` (dedupe by URL vs active + within batch), groups into a dated `Session YYYY-MM-DD` folder, http(s)-only + `isSafeBookmarkUrl` guard, `tabs` permission — issue [#46](https://github.com/paperhurts/gitmarks/issues/46)
 9. ✅ Popup polish: auto-dismiss ~1.2s after a successful save (`setTimeout(window.close)`); restyle popup to the web UI palette (ink/cyan/magenta, mono font, magenta wordmark)
+10. ✅ Popup tags (tag before saving): chip input with local suggestions (domain memory, title words, popularity), `tags.json` colors, already-saved pages prefill + "Update tags" (no duplicate bookmark), tags also apply to "Save all tabs"
 
 For next-piece-of-work: Safari (#26) is the last roadmap item. The plan-driven workflow (`docs/superpowers/plans/YYYY-MM-DD-<feature>.md`) is the expected approach for anything larger than ~3 commits.
 

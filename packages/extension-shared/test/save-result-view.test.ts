@@ -3,7 +3,7 @@ import type { Bookmark } from "@gitmarks/core";
 import { applySaveResult, applySaveAllResult } from "../src/lib/save-result-view.js";
 
 // applySaveResult ignores the bookmark payload; a cast keeps the fixture terse.
-const okResult = { ok: true as const, bookmark: {} as Bookmark };
+const okResult = { ok: true as const, bookmark: {} as Bookmark, outcome: "added" as const };
 
 function makeDom(): { saveBtn: HTMLButtonElement; status: HTMLElement } {
   const saveBtn = document.createElement("button");
@@ -34,6 +34,13 @@ describe("applySaveResult", () => {
     vi.advanceTimersByTime(1200);
     // ...and exactly once after.
     expect(closePopup).toHaveBeenCalledTimes(1);
+  });
+
+  it("on an update of an existing bookmark: says the tags were updated", () => {
+    const { saveBtn, status } = makeDom();
+    applySaveResult(saveBtn, status, { ...okResult, outcome: "updated" }, { closePopup: vi.fn() });
+    expect(status.textContent).toBe("✓ tags updated");
+    expect(saveBtn.textContent).toBe("Saved ✓");
   });
 
   it("on failure: surfaces the message, re-enables the button, never closes", () => {

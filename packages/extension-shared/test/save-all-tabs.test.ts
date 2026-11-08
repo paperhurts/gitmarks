@@ -101,6 +101,16 @@ describe("saveAllTabs", () => {
     expect(committed.file!.bookmarks[0]!.folder).toBe("Session 2026-06-13");
   });
 
+  it("applies tags to newly added tabs only, leaving existing duplicates untouched", async () => {
+    const { client, committed } = clientWith([mkExisting("https://a.com/")]);
+    await saveAllTabs(client, pages("https://a.com/", "https://b.com/"), machineId, nowIso, {
+      tags: ["trip", " Trip "],
+    });
+    const byUrl = new Map(committed.file!.bookmarks.map((b) => [b.url, b]));
+    expect(byUrl.get("https://a.com/")!.tags).toEqual([]);
+    expect(byUrl.get("https://b.com/")!.tags).toEqual(["trip"]);
+  });
+
   it("does not call update when there are no safe candidates", async () => {
     const { client, update } = clientWith();
     const result = await saveAllTabs(client, pages("javascript:void(0)"), machineId, nowIso);

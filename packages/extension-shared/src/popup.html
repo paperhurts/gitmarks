@@ -46,6 +46,44 @@
       #status.err { color: #e879f9; }
       .err { color: #e879f9; }
       .title { font-size: 0.85rem; color: #9ca3af; margin: 0 0 0.5rem 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      /* Tag entry. --tag is set per chip only from a validated tags.json
+         #RRGGBB color (tag-input.ts); everything else falls back to cyan. */
+      .tagbox {
+        display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
+        padding: 0.35rem 0.4rem; margin-bottom: 0.4rem;
+        border: 1px solid #23232e; border-radius: 6px; cursor: text;
+      }
+      .tagbox:focus-within { border-color: #22d3ee; }
+      .tagbox input {
+        flex: 1; min-width: 6ch; border: 0; outline: 0; padding: 0.15rem 0;
+        background: transparent; color: #e5e7eb; font: inherit; font-size: 0.85rem;
+      }
+      .tagbox input::placeholder { color: #6b7280; }
+      .chip {
+        --tag: #22d3ee;
+        display: inline-flex; align-items: center; gap: 0.2rem;
+        max-width: 100%; padding: 0.05rem 0.4rem; border-radius: 999px;
+        font-size: 0.75rem; line-height: 1.4;
+        color: var(--tag);
+        border: 1px solid color-mix(in srgb, var(--tag) 50%, transparent);
+        background: color-mix(in srgb, var(--tag) 18%, transparent);
+        overflow-wrap: anywhere;
+      }
+      button.chip-x {
+        width: auto; padding: 0 0.1rem; margin: 0; border: 0; border-radius: 3px;
+        background: transparent; color: inherit; font-size: 0.85rem; line-height: 1;
+      }
+      button.chip-x:hover:not(:disabled) { background: transparent; color: #e5e7eb; }
+      .suggest { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.6rem; min-height: 0; }
+      .suggest:empty { margin-bottom: 0.2rem; }
+      button.chip.ghost {
+        width: auto; margin: 0; padding: 0.05rem 0.45rem; cursor: pointer;
+        background: transparent; border-style: dashed;
+      }
+      button.chip.ghost::before { content: "+"; opacity: 0.6; margin-right: 0.15rem; }
+      button.chip.ghost:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--tag) 18%, transparent); color: var(--tag);
+      }
       footer.weblink {
         padding: 0.5rem 1rem 0.75rem;
         border-top: 1px solid #23232e;

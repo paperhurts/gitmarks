@@ -21,7 +21,7 @@ export function applySaveResult(
   const { closePopup = () => window.close(), closeDelayMs = 1200 } = options;
   if (result.ok) {
     status.className = "ok";
-    status.textContent = "✓ saved";
+    status.textContent = result.outcome === "updated" ? "✓ tags updated" : "✓ saved";
     saveBtn.textContent = "Saved ✓";
     saveBtn.classList.add("done");
     // Delay leaves screen-reader users time to hear the status update; a no-op

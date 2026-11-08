@@ -1,5 +1,13 @@
 import browser from "webextension-polyfill";
-import { GitHubClient } from "@gitmarks/core";
+import {
+  GitHubClient,
+  bookmarksFileSchema,
+  tagsFileSchema,
+  canonicalTag,
+  normalizeUrl,
+  type Bookmark,
+  type TagsFile,
+} from "@gitmarks/core";
 import { loadSettings, SettingsCorruptError } from "./lib/settings.js";
 import { getMachineId } from "./lib/machine-id.js";
 import {
@@ -10,6 +18,9 @@ import {
 } from "./lib/save-flow.js";
 import { applySaveResult, applySaveAllResult } from "./lib/save-result-view.js";
 import { requestTabsPermission } from "./lib/tabs-permission.js";
+import { TagInput } from "./lib/tag-input.js";
+import { knownTags, suggestTags } from "./lib/tag-suggest.js";
+import { BOOKMARKS_PATH } from "./lib/bookmarks-file.js";
 import { wireWebUiLink } from "./lib/web-ui-link.js";
 import type { LastErrorRecord } from "./lib/background-core.js";
 
@@ -75,6 +86,7 @@ async function render(): Promise<void> {
   // innerHTML, issue #75).
   root!.innerHTML = `
     <p class="title"></p>
+    <div id="tags"></div>
     <button id="save">Save this page</button>
     <button id="save-all" class="secondary">Save all tabs</button>
     <p id="status"></p>
@@ -107,7 +119,81 @@ async function render(): Promise<void> {
       branch: settings.branch,
     });
 
+  // ── Tags ──────────────────────────────────────────────────────────────
+  // Remote data powers suggestions, chip colors, and "already saved"
+  // detection. It loads in the background; the box is usable immediately.
+  let bookmarks: Bookmark[] = [];
+  let tagsFile: TagsFile | null = null;
+  let known: string[] = [];
+  // Set when this URL is already bookmarked: the chips were prefilled with its
+  // tags, so saving sends the full desired set (replaceTags) and may remove.
+  let existing: Bookmark | null = null;
+  const sameTags = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && a.every((t, i) => t === b[i]);
+
+  const tagInput = new TagInput({
+    container: document.getElementById("tags")!,
+    canonicalize: (t) => canonicalTag(t, known),
+    colorFor: (t) => tagsFile?.tags[t]?.color,
+    getSuggestions: (selected, query) =>
+      suggestTags({
+        bookmarks,
+        known,
+        url: tab.url!,
+        title: tab.title ?? "",
+        selected,
+        query,
+      }),
+    onSubmit: () => saveBtn.click(),
+  });
+  tagInput.input.focus();
+
+  void (async () => {
+    try {
+      const client = makeClient();
+      const [bmRes, tagRes] = await Promise.allSettled([
+        client.read<unknown>(BOOKMARKS_PATH),
+        client.read<unknown>("tags.json"),
+      ]);
+      // Re-validate remote data before using any of it (same rule as the web UI).
+      if (bmRes.status === "fulfilled") {
+        const parsed = bookmarksFileSchema.safeParse(bmRes.value.data);
+        if (parsed.success) bookmarks = parsed.data.bookmarks;
+      }
+      if (tagRes.status === "fulfilled") {
+        const parsed = tagsFileSchema.safeParse(tagRes.value.data);
+        if (parsed.success) tagsFile = parsed.data;
+      }
+      known = knownTags(bookmarks, tagsFile);
+
+      const url = normalizeUrl(tab.url!, {
+        stripTrackingParams: settings.stripTrackingParams ?? false,
+      });
+      const match = bookmarks.find((b) => b.deleted_at == null && b.url === url);
+      if (match != null && !saveBtn.disabled) {
+        existing = match;
+        // Keep anything typed before the data arrived.
+        tagInput.setTags([...match.tags, ...tagInput.tags]);
+        saveBtn.textContent = "Update tags";
+        status.className = "ok";
+        status.textContent = "Already saved";
+      } else {
+        tagInput.refresh();
+      }
+    } catch (err) {
+      // Suggestions are best-effort; saving still works without them.
+      console.warn("[gitmarks] tag data load failed", err);
+    }
+  })();
+
   saveBtn.addEventListener("click", async () => {
+    tagInput.commitPending();
+    const tags = [...tagInput.tags];
+    if (existing != null && sameTags(tags, existing.tags)) {
+      // Nothing changed — don't make an empty commit.
+      window.close();
+      return;
+    }
     saveBtn.disabled = true;
     saveBtn.textContent = "saving…";
     status.className = "";
@@ -120,7 +206,11 @@ async function render(): Promise<void> {
         { url: tab.url!, title: tab.title ?? tab.url! },
         machineId,
         new Date().toISOString(),
-        { stripTrackingParams: settings.stripTrackingParams },
+        {
+          stripTrackingParams: settings.stripTrackingParams,
+          tags,
+          replaceTags: existing != null,
+        },
       );
     } catch (err) {
       result = {
@@ -149,6 +239,7 @@ async function render(): Promise<void> {
           : "Allow tab access to save all tabs.";
       return;
     }
+    tagInput.commitPending();
     saveAllBtn.disabled = true;
     saveAllBtn.textContent = "saving all…";
     status.className = "";
@@ -172,6 +263,7 @@ async function render(): Promise<void> {
       result = await saveAllTabs(makeClient(), pages, machineId, nowIso, {
         stripTrackingParams: settings.stripTrackingParams,
         folder: `Session ${nowIso.slice(0, 10)}`,
+        tags: [...tagInput.tags],
       });
     } catch (err) {
       result = {
