@@ -1,5 +1,5 @@
 import type { BookmarksFile } from "@gitmarks/core";
-import { updateBookmarks } from "@gitmarks/core";
+import { gcTombstones, updateBookmarks } from "@gitmarks/core";
 
 type Mutator = (file: BookmarksFile) => BookmarksFile;
 
@@ -42,4 +42,13 @@ export function bulkSoftDelete(ids: string[], nowIso: string): Mutator {
 export function bulkRestore(ids: string[], nowIso: string): Mutator {
   return (file) =>
     updateBookmarks(file, ids.map((id) => ({ id, patch: { deleted_at: null } })), nowIso);
+}
+
+/**
+ * Permanently drop every soft-deleted entry from bookmarks.json now (git
+ * history keeps them). A device that hasn't polled since the deletes keeps
+ * its local copies, since it never sees their tombstones.
+ */
+export function emptyTrash(nowIso: string): Mutator {
+  return (file) => gcTombstones(file, 0, nowIso);
 }
