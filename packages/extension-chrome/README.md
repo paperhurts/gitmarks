@@ -89,11 +89,26 @@ After loading the unpacked extension and completing first-run setup:
       after ~1.2s. (Popup uses the web UI palette: ink bg, cyan accents,
       magenta wordmark.)
 - [ ] Refresh `bookmarks.json` on github.com — the new entry is there.
-- [ ] Save the same page again → second entry with a different ULID and
-      same URL (dedupe is out of scope).
+- [ ] Reopen the popup on the same page → status "Already saved", button
+      reads **Update tags**, existing tags prefilled. Saving does NOT add a
+      second entry (exact-URL dedupe); with tags unchanged it just closes.
 - [ ] Edit `bookmarks.json` manually on GitHub (add a space, commit).
       Save another page → green "✓ saved", concurrent edit handled by
       the 409 retry-replay loop.
+
+**Popup tags:**
+- [ ] Open the popup → the tag box has focus; suggestion chips (dashed, `+`)
+      show tags used on other bookmarks from the same site first, colored per
+      `tags.json`.
+- [ ] Type `rust` + Enter where a `Rust` tag exists → chip reads `Rust`.
+      Comma also commits; Backspace on an empty box removes the last chip.
+- [ ] Enter on an empty box saves. `bookmarks.json` entry has the tags;
+      `tags.json` is NOT modified (one commit).
+- [ ] On an already-saved page, remove a chip (×) → **Update tags** →
+      "✓ tags updated"; the entry's tags shrink, title/folder/notes unchanged.
+- [ ] Rename that bookmark in Chrome's bookmark manager → after sync its tags
+      are still on the GitHub entry.
+- [ ] Type tags, then **Save all tabs** → every newly saved tab gets them.
 
 **Save all tabs (issue #46):**
 - [ ] Open a few http(s) tabs plus a `chrome://` tab in one window. Click

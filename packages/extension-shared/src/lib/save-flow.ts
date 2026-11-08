@@ -10,6 +10,8 @@ import {
   addBookmark,
   addBookmarks,
   isSafeBookmarkUrl,
+  mergeTags,
+  updateBookmark,
 } from "@gitmarks/core";
 import { buildBookmark } from "./bookmark-factory.js";
 import { updateBookmarksOrBootstrap } from "./bookmarks-file.js";
@@ -25,7 +27,14 @@ export type SaveFailure = {
   message: string;
 };
 
-export type SaveResult = { ok: true; bookmark: Bookmark } | SaveFailure;
+/**
+ * `added`: a new bookmark was appended. `updated`: an active bookmark with the
+ * same (normalized) URL already existed, so its tags were updated instead of
+ * creating a duplicate; `bookmark` is the post-update entry.
+ */
+export type SaveResult =
+  | { ok: true; bookmark: Bookmark; outcome: "added" | "updated" }
+  | SaveFailure;
 
 /** Outcome of a "save all tabs" batch. `total` is the number of pages handed in. */
 export type SaveAllTabsResult =
@@ -43,6 +52,18 @@ export type SaveAllTabsResult =
 
 export interface SaveOptions {
   stripTrackingParams?: boolean;
+  /** Tags for the bookmark (cleaned via normalizeTag). */
+  tags?: readonly string[];
+}
+
+export interface SaveBookmarkOptions extends SaveOptions {
+  /**
+   * When the URL is already bookmarked: true replaces its tags with `tags`
+   * (the popup prefilled the existing tags, so `tags` is the full desired set
+   * and may remove some); false/omitted unions them, so a save made before the
+   * popup knew about the existing entry can never drop tags.
+   */
+  replaceTags?: boolean;
 }
 
 export async function saveBookmark(
@@ -50,28 +71,52 @@ export async function saveBookmark(
   page: PageInfo,
   machineId: string,
   nowIso: string,
-  opts: SaveOptions = {},
+  opts: SaveBookmarkOptions = {},
 ): Promise<SaveResult> {
   const bookmark = buildBookmark({
     url: page.url,
     title: page.title,
     machineId,
     nowIso,
+    tags: opts.tags ?? [],
     ...(opts.stripTrackingParams !== undefined
       ? { stripTrackingParams: opts.stripTrackingParams }
       : {}),
   });
-  const commitMsg = `add bookmark from chrome@${machineId}`;
+  const commitMsg = opts.replaceTags
+    ? `update bookmark tags from chrome@${machineId}`
+    : `add bookmark from chrome@${machineId}`;
 
+  // Set by the final (possibly replayed) mutator run, so they describe the
+  // state that actually committed.
+  let saved: Bookmark = bookmark;
+  let outcome: "added" | "updated" = "added";
   try {
     await updateBookmarksOrBootstrap(
       client,
-      (current) => addBookmark(current, bookmark, nowIso),
+      (current) => {
+        // Dedupe by URL against the *current* remote state inside the mutator
+        // (not popup state), so a 409 replay sees concurrent edits.
+        const existing = current.bookmarks.find(
+          (b) => b.deleted_at == null && b.url === bookmark.url,
+        );
+        if (existing == null) {
+          saved = bookmark;
+          outcome = "added";
+          return addBookmark(current, bookmark, nowIso);
+        }
+        const tags = opts.replaceTags
+          ? bookmark.tags
+          : mergeTags(existing.tags, bookmark.tags);
+        saved = { ...existing, tags, updated_at: nowIso };
+        outcome = "updated";
+        return updateBookmark(current, existing.id, { tags }, nowIso);
+      },
       commitMsg,
       machineId,
       nowIso,
     );
-    return { ok: true, bookmark };
+    return { ok: true, bookmark: saved, outcome };
   } catch (err) {
     console.error("[gitmarks] saveBookmark failed", err);
     return classify(err);
@@ -103,6 +148,7 @@ export async function saveAllTabs(
       machineId,
       nowIso,
       folder: opts.folder ?? "",
+      tags: opts.tags ?? [],
       ...(opts.stripTrackingParams !== undefined
         ? { stripTrackingParams: opts.stripTrackingParams }
         : {}),

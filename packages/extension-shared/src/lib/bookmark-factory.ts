@@ -1,5 +1,5 @@
 import type { Bookmark } from "@gitmarks/core";
-import { newUlid, normalizeUrl, isSafeBookmarkUrl } from "@gitmarks/core";
+import { newUlid, normalizeUrl, isSafeBookmarkUrl, normalizeTag, mergeTags } from "@gitmarks/core";
 
 export interface BuildBookmarkInput {
   url: string;
@@ -10,6 +10,14 @@ export interface BuildBookmarkInput {
   stripTrackingParams?: boolean;
   /** Folder path to place the bookmark in (e.g. "Session 2026-06-13"). Default "" (root). */
   folder?: string;
+  /** Tags to attach; each is run through normalizeTag and de-duped case-insensitively. */
+  tags?: readonly string[];
+}
+
+/** normalizeTag every entry, drop empties, de-dupe case-insensitively. */
+export function cleanTags(tags: readonly string[]): string[] {
+  const cleaned = tags.map(normalizeTag).filter((t): t is string => t != null);
+  return mergeTags(cleaned, []);
 }
 
 export function buildBookmark(input: BuildBookmarkInput): Bookmark {
@@ -23,7 +31,7 @@ export function buildBookmark(input: BuildBookmarkInput): Bookmark {
     }),
     title: input.title,
     folder: input.folder ?? "",
-    tags: [],
+    tags: cleanTags(input.tags ?? []),
     added_at: input.nowIso,
     updated_at: input.nowIso,
     added_from: `chrome@${input.machineId}`,

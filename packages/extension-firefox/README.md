@@ -76,6 +76,10 @@ version Chrome uses) need a manual check:
       prefix that the Chrome extension uses too. We may revisit this if
       cross-browser disambiguation matters; for now, all `added_from`
       values carry `chrome@` regardless of browser.)
+- [ ] **Popup tags:** tag box is focused on open; suggestions appear;
+      Enter commits a chip, Enter on empty saves; the GitHub entry carries the
+      tags. Reopening on the same page shows "Already saved" + **Update tags**
+      with the tags prefilled, and saving doesn't duplicate the entry.
 - [ ] **Save all tabs (issue #46):** open a few http(s) tabs plus an
       `about:` tab, click the toolbar icon → **Save all tabs**. Status shows
       `✓ saved N tabs` (http(s) only; `about:` and duplicate URLs skipped),

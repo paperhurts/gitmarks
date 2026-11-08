@@ -214,6 +214,54 @@ describe("listeners", () => {
     expect(captured!.bookmarks[0]!.title).toBe("New title");
   });
 
+  it("native title + url edit preserves gitmarks-only fields (tags, notes)", async () => {
+    // Tags exist only in bookmarks.json — the native tree can't carry them.
+    // A native edit must patch url/title only, never reset tags to [].
+    let captured: BookmarksFile | null = null;
+    const update = vi.fn(async (_p: string, mutate: any) => {
+      const initial: BookmarksFile = {
+        version: 1,
+        updated_at: "x",
+        bookmarks: [
+          {
+            id: "existing-ulid",
+            url: "https://example.com/",
+            title: "Old",
+            folder: "",
+            tags: ["dev", "Rust"],
+            added_at: "y",
+            updated_at: "y",
+            added_from: "chrome@other",
+            deleted_at: null,
+            notes: "keep me",
+          },
+        ],
+      };
+      captured = mutate(initial);
+      return { data: captured, sha: "s", etag: "" };
+    });
+    const idMap = await IdMap.load();
+    idMap.set(asUlid("existing-ulid"), asNodeId("node-existing"));
+
+    registerListeners({
+      getClient: async () => fakeClient({ update }),
+      getIdMap: async () => idMap,
+      getBarOtherIds: async () => ({ bar: BAR, other: OTHER }),
+      getMachineId: async () => machineId,
+    });
+
+    const changeListener = (browser.bookmarks.onChanged.addListener as any).mock.calls[0]![0];
+    changeListener("node-existing", { title: "New title", url: "https://example.com/moved" });
+
+    await flushPending();
+
+    const bm = captured!.bookmarks[0]!;
+    expect(bm.title).toBe("New title");
+    expect(bm.url).toBe("https://example.com/moved");
+    expect(bm.tags).toEqual(["dev", "Rust"]);
+    expect(bm.notes).toBe("keep me");
+  });
+
   it("create + update on the same nodeId within one batch lands with the updated title (issue #19)", async () => {
     // User creates a bookmark and then immediately renames it within the
     // 500ms debounce window. Both events land in the same flush batch.
