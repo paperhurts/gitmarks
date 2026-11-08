@@ -6,6 +6,7 @@ import {
   bulkSetFolder,
   bulkSoftDelete,
   bulkRestore,
+  emptyTrash,
 } from "../src/lib/bulk-mutations.js";
 
 function mk(over: Partial<Bookmark> = {}): Bookmark {
@@ -108,5 +109,22 @@ describe("bulkRestore", () => {
   it("throws via updateBookmarks when an id is missing", () => {
     const mutator = bulkRestore(["01HXYZ8K7M9P3RQ2V5W6Z8B0CZ"], now);
     expect(() => mutator(file)).toThrow(/not found/);
+  });
+});
+
+describe("emptyTrash", () => {
+  it("drops every soft-deleted entry, including ones deleted moments ago", () => {
+    const now = "2026-11-08T12:00:00Z";
+    const f: BookmarksFile = {
+      version: 1,
+      updated_at: now,
+      bookmarks: [
+        mk({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0D1" }),
+        mk({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0D2", deleted_at: now }),
+        mk({ id: "01HXYZ8K7M9P3RQ2V5W6Z8B0D3", deleted_at: "2026-01-01T00:00:00Z" }),
+      ],
+    };
+    const next = emptyTrash(now)(f);
+    expect(next.bookmarks.map((b) => b.id)).toEqual(["01HXYZ8K7M9P3RQ2V5W6Z8B0D1"]);
   });
 });
