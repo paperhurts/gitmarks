@@ -69,6 +69,7 @@ Web UI scope, today:
 - Multi-select + bulk operations (add tag, remove tag, set folder, move to trash)
 - Trash view with restore
 - Netscape HTML export
+- Duplicate cleanup (notice on the list page when entries share a URL)
 
 ## Two places it runs
 

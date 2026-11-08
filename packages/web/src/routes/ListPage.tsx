@@ -5,6 +5,8 @@ import { useGitmarksData } from "../hooks/useGitmarksData.js";
 import { useSelection } from "../hooks/useSelection.js";
 import { BookmarkList } from "../components/BookmarkList.js";
 import { BulkActionsBar } from "../components/BulkActionsBar.js";
+import { DuplicatesNotice } from "../components/DuplicatesNotice.js";
+import { dedupeBookmarks, findDuplicates } from "../lib/dedupe.js";
 import { SearchBar } from "../components/SearchBar.js";
 import { TagFilter } from "../components/TagFilter.js";
 import { Layout, type LayoutStatus } from "../components/Layout.js";
@@ -46,6 +48,10 @@ export function ListPage({ client }: Props) {
     [tagFiltered, query],
   );
   const used = useMemo(() => allUsedTags(visible), [visible]);
+  const duplicates = useMemo(
+    () => (bookmarksFile != null ? findDuplicates(bookmarksFile) : { urls: 0, extra: 0 }),
+    [bookmarksFile],
+  );
 
   const status: LayoutStatus = loading
     ? { kind: "loading", message: "loading…" }
@@ -113,6 +119,18 @@ export function ListPage({ client }: Props) {
           )}
         </aside>
         <section>
+          {duplicates.extra > 0 && (
+            <DuplicatesNotice
+              summary={duplicates}
+              busy={writing}
+              onConfirm={() =>
+                runBulk(
+                  `dedupe: move ${duplicates.extra} duplicate entries to trash`,
+                  dedupeBookmarks(new Date().toISOString()),
+                )
+              }
+            />
+          )}
           <SearchBar value={query} onChange={setQuery} />
           {selection.selected.size > 0 && tagsFile != null && (
             <BulkActionsBar
