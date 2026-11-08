@@ -156,7 +156,9 @@ describe("saveBookmark — tags and URL dedupe", () => {
   });
 
   it("does not treat a tombstoned bookmark as existing", async () => {
-    const dead = { ...existing, deleted_at: "2026-02-01T00:00:00Z" };
+    // Deleted "now": an old date would be GC'd (30-day tombstone TTL) before
+    // the length assertion and stop exercising the tombstone check.
+    const dead = { ...existing, deleted_at: nowIso };
     const { client, committed } = capturingClient({ version: 1, updated_at: "x", bookmarks: [dead] });
     const result = await saveBookmark(client, page, machineId, nowIso, { tags: ["x"] });
     expect(result.ok && result.outcome).toBe("added");
