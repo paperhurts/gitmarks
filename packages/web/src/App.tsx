@@ -5,8 +5,14 @@ import {
   RouterProvider,
   useOutletContext,
 } from "react-router-dom";
-import { useMemo } from "react";
-import { loadSettings, type Settings } from "./lib/settings.js";
+import { useEffect, useMemo, useState } from "react";
+import {
+  isExtensionPage,
+  loadExtensionSettings,
+  loadSettings,
+  type Settings,
+} from "./lib/settings.js";
+import { ExtensionSetupNotice } from "./components/ExtensionSetupNotice.js";
 import { makeClient } from "./lib/client.js";
 import type { GitHubClient } from "@gitmarks/core";
 import { SetupPage } from "./routes/SetupPage.js";
@@ -23,7 +29,27 @@ interface AppContext {
 // sidestep a Node 24 / undici / jsdom AbortSignal incompatibility that breaks
 // createHashRouter under test. Production wiring is in App() below.
 export function RequireSettings() {
-  const settings = loadSettings();
+  // On the public site settings live in localStorage and load synchronously.
+  // In the copy bundled with the extension they come from the extension's
+  // storage.local (async), so the user never sets up twice.
+  const inExtension = isExtensionPage();
+  const [settings, setSettings] = useState<Settings | null | undefined>(() =>
+    inExtension ? undefined : loadSettings(),
+  );
+  useEffect(() => {
+    if (!inExtension) return;
+    let live = true;
+    loadExtensionSettings().then(
+      (s) => live && setSettings(s),
+      (err) => {
+        console.error("[gitmarks] reading extension settings failed", err);
+        if (live) setSettings(null);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [inExtension]);
   // useMemo keyed on settings fields so client identity is stable across renders.
   // useGitmarksData's effect deps include the client; an unstable client re-fires the load.
   const client = useMemo(
@@ -31,7 +57,12 @@ export function RequireSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [settings?.token, settings?.owner, settings?.repo, settings?.branch],
   );
-  if (settings == null || client == null) return <Navigate to="/setup" replace />;
+  if (settings === undefined) {
+    return <p className="p-6 text-sm text-cyan-soft">loading…</p>;
+  }
+  if (settings == null || client == null) {
+    return inExtension ? <ExtensionSetupNotice /> : <Navigate to="/setup" replace />;
+  }
   const ctx: AppContext = { settings, client };
   return <Outlet context={ctx} />;
 }

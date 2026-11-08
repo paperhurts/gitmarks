@@ -7,7 +7,7 @@
     "predev": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
     "dev": "vite",
     "prebuild": "node ../../scripts/gen-icons.mjs && node ./scripts/copy-html.mjs",
-    "build": "vite build && node ./scripts/copy-manifest.mjs",
+    "build": "vite build && node ./scripts/copy-manifest.mjs && node ../../scripts/copy-web.mjs dist",
     "pretypecheck": "node ./scripts/copy-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -16,6 +16,7 @@
     "@gitmarks/extension-shared": "workspace:*"
   },
   "devDependencies": {
+    "@gitmarks/web": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/webextension-polyfill": "^0.12.0",
     "vite": "^5.4.0"

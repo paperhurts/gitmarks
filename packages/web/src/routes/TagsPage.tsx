@@ -6,7 +6,7 @@ import { Layout, type LayoutStatus } from "../components/Layout.js";
 import { useGitmarksData } from "../hooks/useGitmarksData.js";
 import { toNetscapeHtml } from "../lib/netscape-export.js";
 import { downloadString } from "../lib/download.js";
-import { clearSettings } from "../lib/settings.js";
+import { clearSettings, isExtensionPage } from "../lib/settings.js";
 
 interface Props {
   client: GitHubClient;
@@ -61,7 +61,7 @@ export function TagsPage({ client }: Props) {
   }
 
   return (
-    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={onSignOut} refreshing={refreshing} busy={writing}>
+    <Layout status={status} onRefresh={onRefresh} onExport={onExport} onSignOut={isExtensionPage() ? undefined : onSignOut} refreshing={refreshing} busy={writing}>
       <div data-testid="tags-page">
         {tagsFile != null && <TagManager tagsFile={tagsFile} onMutate={onMutate} />}
       </div>

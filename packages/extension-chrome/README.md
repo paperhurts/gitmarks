@@ -113,8 +113,13 @@ After loading the unpacked extension and completing first-run setup:
 
 **Web UI link:**
 - [ ] The popup footer shows **"Open web UI ↗"** on every state — clicking it
-      opens the companion read/search/manage web UI
-      (https://paperhurts.github.io/gitmarks/) in a new tab.
+      opens the web UI bundled in the extension
+      (`chrome-extension://<id>/web/index.html`) in a new tab and closes the popup.
+- [ ] After setting up once in the extension, that page lists your bookmarks
+      straight away — no PAT form, no second setup. There's no **Sign out**
+      button there (it would wipe the extension's settings).
+- [ ] Before setup (or after clearing settings), the page shows "gitmarks isn't
+      set up yet" with **Open gitmarks settings**, which opens the options page.
 
 **Native tree sync (new in v0.2):**
 - [ ] Drag any URL to your Chrome bookmarks bar. Wait ~1 second.

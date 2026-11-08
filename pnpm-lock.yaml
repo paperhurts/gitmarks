@@ -40,6 +40,9 @@ importers:
       '@crxjs/vite-plugin':
         specifier: ^2.4.0
         version: 2.4.0(vite@5.4.21(@types/node@22.19.19))
+      '@gitmarks/web':
+        specifier: workspace:*
+        version: link:../web
       '@playwright/test':
         specifier: ^1.48.0
         version: 1.60.0
@@ -56,6 +59,9 @@ importers:
         specifier: workspace:*
         version: link:../extension-shared
     devDependencies:
+      '@gitmarks/web':
+        specifier: workspace:*
+        version: link:../web
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.19
