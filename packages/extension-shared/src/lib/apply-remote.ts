@@ -1,6 +1,6 @@
 import browser from "webextension-polyfill";
 import type { Bookmarks } from "webextension-polyfill";
-import { type BookmarksFile, isSafeBookmarkUrl } from "@gitmarks/core";
+import { type BookmarksFile, isSafeBookmarkUrl, normalizeUrl } from "@gitmarks/core";
 import { type IdMap, asUlid, asNodeId } from "./id-mapping.js";
 import { splitFolderPath } from "./folder-path.js";
 import { suppress, suppressNode } from "./suppression.js";
@@ -11,6 +11,17 @@ export async function applyRemoteChanges(
   bookmarksBarId: string,
   otherBookmarksId: string,
 ): Promise<void> {
+  // URLs that already have a local node via some ULID. A remote file holding
+  // several active entries for one URL (legacy duplicates) must not get a
+  // local bookmark per entry — that multiplied duplicates on every device.
+  const represented = new Set<string>();
+  for (const bm of remote.bookmarks) {
+    if (bm.deleted_at != null) continue;
+    if (idMap.nodeForUlid(asUlid(bm.id)) == null) continue;
+    const k = keyOf(bm.url);
+    if (k != null) represented.add(k);
+  }
+
   try {
     for (const bm of remote.bookmarks) {
       const existingNode = idMap.nodeForUlid(asUlid(bm.id));
@@ -54,6 +65,10 @@ export async function applyRemoteChanges(
         continue;
       }
 
+      const key = keyOf(bm.url);
+      if (key != null && represented.has(key)) continue;
+      if (key != null) represented.add(key);
+
       const parentId = await ensureFolderPath(
         bm.folder,
         bookmarksBarId,
@@ -72,6 +87,14 @@ export async function applyRemoteChanges(
     // threw. The local chrome.bookmarks state is durable; the idMap must
     // match it.
     await idMap.save();
+  }
+}
+
+function keyOf(url: string): string | null {
+  try {
+    return normalizeUrl(url);
+  } catch {
+    return null;
   }
 }
 
