@@ -88,9 +88,9 @@ export function TrashPage({ client }: Props) {
       <div data-testid="trash-page" className="p-4">
         <h1 className="text-magenta text-2xl mb-4">Trash</h1>
         <p className="text-cyan-soft/60 text-xs mb-4">
-          Soft-deleted bookmarks from the last 30 days (restorable). Trashed entries
-          stay in bookmarks.json until you empty the trash; git history keeps
-          everything either way.
+          Soft-deleted bookmarks from the last 30 days (restorable). After 30 days
+          the extension drops them from bookmarks.json on its next save; Empty
+          trash removes them right away. Git history keeps everything.
         </p>
         {trashed > 0 && (
           <div data-testid="empty-trash" className="mb-4 flex flex-wrap items-center gap-3 text-sm">
