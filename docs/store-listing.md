@@ -151,6 +151,12 @@ together.
 > settings; it is an extension page under the manifest CSP and talks only to
 > api.github.com. No remote code, no minified third-party code beyond npm
 > dependencies listed in `pnpm-lock.yaml`.
+>
+> `web-ext lint` reports two `UNSAFE_VAR_ASSIGNMENT` warnings in
+> `web/assets/index-*.js`. Both are inside React DOM itself (its
+> `dangerouslySetInnerHTML` / SVG setter); gitmarks never uses
+> `dangerouslySetInnerHTML`, and the web UI renders bookmark data only as
+> React text nodes.
 
 ### 1.1.0 release notes
 > **Tags, a built-in web UI, and important sync fixes.**
