@@ -19,8 +19,8 @@ You'll need a GitHub account, a private repo, and a fine-grained personal
 access token scoped to that repo (Contents: read/write) — the extension's
 options page walks you through all of it in a couple of minutes.
 
-**Status:** v1.0.0, published on the Chrome Web Store and Firefox AMO.
-Save via toolbar button, save all open tabs in one action, two-way sync
+**Status:** v1.1.0, published on the Chrome Web Store and Firefox AMO.
+Save via toolbar button (with tags), save all open tabs in one action, two-way sync
 with the native bookmark tree, 5-min poll for remote changes, automatic
 conflict retry — one shared codebase across both browsers. Web UI (list,
 search, tag management, bulk operations, trash, Netscape HTML export,
@@ -32,6 +32,9 @@ sign out) deploys as a static SPA. Safari is next in the roadmap. See
 ### Browser extension (Chrome + Firefox)
 
 - **Save the current tab** to GitHub via the toolbar button
+- **Tag before saving** — type tags in the popup (Enter or comma), with
+  suggestions from your existing tags; reopen the popup on a saved page to
+  edit its tags
 - **Save all open tabs** in the current window in one action — one batched
   `bookmarks.json` write, grouped under a dated `Session YYYY-MM-DD` folder,
   with exact-URL de-dupe and browser-internal tabs skipped
@@ -47,7 +50,8 @@ sign out) deploys as a static SPA. Safari is next in the roadmap. See
   device) pull into the browser on a 5-minute poll
 - **Automatic conflict resolution** via GitHub's file SHA + optimistic retry-replay
 - **Optional tracking-param stripping** (utm_*, fbclid, gclid, …) at save time — opt-in
-- **One-click link to the web UI** from the popup
+- **Web UI built in** — "Open web UI" in the popup opens a copy bundled with
+  the extension, already signed in with the extension's settings (no second setup)
 - Dark cyan/magenta themed popup + options pages, matching the web UI
 
 ### Web UI (static SPA — https://paperhurts.github.io/gitmarks/)
@@ -55,7 +59,8 @@ sign out) deploys as a static SPA. Safari is next in the roadmap. See
 - **List + full-text search** across title, URL, tags, and notes
 - **Tag management:** rename, recolor, add, delete
 - **Bulk operations:** multi-select → add/remove tag, set folder, soft-delete
-- **Trash** with restore (30-day soft-delete window)
+- **Trash** with restore (30-day soft-delete window) and **Empty trash**
+- **Remove duplicates** — collapses entries that share a URL, merging their tags
 - **Netscape HTML export** — a standard bookmarks file you can re-import anywhere
 - **Sign out** — clears your PAT/settings from this machine's local storage
 

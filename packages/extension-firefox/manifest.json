@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "gitmarks",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Save bookmarks to your own GitHub repo. No server, no account — your data is a file in a repo you control.",
   "homepage_url": "https://github.com/paperhurts/gitmarks",
   "permissions": ["storage", "activeTab", "bookmarks", "alarms"],
